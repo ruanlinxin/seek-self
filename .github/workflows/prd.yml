@@ -1,0 +1,99 @@
+name: 构建和打包
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 设置 Node.js 环境
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: 安装依赖
+      run: yarn
+      
+    - name: 构建项目
+      run: npm run build
+      
+    - name: 验证构建结果
+      run: |
+        if [ ! -d "dist" ]; then
+          echo "构建失败：dist 目录不存在"
+          exit 1
+        fi
+        echo "构建成功，dist 目录内容："
+        ls -la dist/
+        
+    - name: 上传构建制品
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-files
+        path: |
+          dist/
+          Dockerfile
+          nginx.conf
+        retention-days: 30
+        
+    - name: 创建发布包
+      run: |
+        # 创建发布目录
+        mkdir -p release
+        
+        # 复制 dist 目录
+        cp -r dist release/
+        
+        # 复制 Dockerfile 和 nginx.conf
+        cp Dockerfile release/
+        cp nginx.conf release/
+        
+        # 创建 README 文件
+        cat > release/README.md << EOF
+        # 部署说明
+        
+        ## 文件说明
+        - \`dist/\`: 构建后的静态文件
+        - \`Dockerfile\`: Docker 构建文件
+        - \`nginx.conf\`: Nginx 配置文件
+        
+        ## 部署方式
+        
+        ### 方式一：使用 Docker
+        \`\`\`bash
+        docker build -t seek-self-panel .
+        docker run -p 3000:3000 seek-self-panel
+        \`\`\`
+        
+        ### 方式二：直接部署
+        将 \`dist\` 目录内容部署到 Web 服务器即可。
+        
+        ## 构建信息
+        - 构建时间: $(date)
+        - 构建分支: ${{ github.ref_name }}
+        - 提交哈希: ${{ github.sha }}
+        EOF
+        
+    - name: 上传发布包
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-package
+        path: release/
+        retention-days: 90
+        
+    - name: 输出构建信息
+      run: |
+        echo "构建完成！"
+        echo "分支: ${{ github.ref_name }}"
+        echo "提交: ${{ github.sha }}"
+        echo "时间: $(date)"
+        echo "Node版本: $(node --version)"
+        echo "NPM版本: $(npm --version)" 
