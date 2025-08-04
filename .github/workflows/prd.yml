@@ -9,8 +9,39 @@ on:
     types: [ published ]
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'release'
+
+    steps:
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: 'panel/yarn.lock'
+
+      - name: 安装依赖
+        run: |
+          cd panel
+          yarn install --frozen-lockfile
+
+      - name: 构建前端项目
+        run: |
+          cd panel
+          yarn build
+
+      - name: 输出构建信息
+        run: |
+          echo "构建完成！"
+          echo "分支: ${{ github.ref_name }}"
+          echo "提交哈希: ${{ github.sha }}"
+          echo "构建时间: $(date)"
+
   release-build:
     runs-on: ubuntu-latest
+    if: github.event_name == 'release'
 
     steps:
       - name: 检出代码
