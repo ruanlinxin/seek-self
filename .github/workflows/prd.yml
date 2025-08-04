@@ -1,4 +1,4 @@
-name: 构建和打包
+name: 发布构建
 
 on:
   push:
@@ -9,91 +9,98 @@ on:
     types: [ published ]
 
 jobs:
-  build:
+  release-build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 设置 Node.js 环境
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: 检出代码
+        uses: actions/checkout@v4
 
-    - name: 安装依赖
-      run: yarn
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
 
-    - name: 构建项目
-      run: npm run build
+      - name: 安装依赖
+        run: |
+          cd panel
+          yarn install --frozen-lockfile
 
-    - name: 验证构建结果
-      run: |
-        if [ ! -d "dist" ]; then
-          echo "构建失败：dist 目录不存在"
-          exit 1
-        fi
-        echo "构建成功，dist 目录内容："
-        ls -la dist/
+      - name: 构建前端项目
+        run: |
+          cd panel
+          yarn build
 
-    - name: 上传构建制品
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist-files
-        path: |
-          dist/
-          Dockerfile
-          nginx.conf
-        retention-days: 30
+      - name: 创建发布包
+        run: |
+          # 创建发布目录
+          mkdir -p release-${{ github.event.release.tag_name }}
+          
+          # 复制前端构建结果
+          cp -r panel/dist release-${{ github.event.release.tag_name }}/
+          
+          # 复制前端 Dockerfile 和 nginx.conf
+          cp panel/Dockerfile release-${{ github.event.release.tag_name }}/
+          cp panel/nginx.conf release-${{ github.event.release.tag_name }}/
+          
+          # 创建版本信息文件
+          cat > release-${{ github.event.release.tag_name }}/VERSION << EOF
+          版本: ${{ github.event.release.tag_name }}
+          发布时间: ${{ github.event.release.published_at }}
+          发布说明: ${{ github.event.release.body }}
+          构建时间: $(date)
+          提交哈希: ${{ github.sha }}
+          EOF
+          
+          # 创建部署脚本
+          cat > release-${{ github.event.release.tag_name }}/deploy.sh << 'EOF'
+          #!/bin/bash
+          
+          echo "开始部署 seek-self-panel..."
+          
+          # 检查 Docker 是否可用
+          if command -v docker &> /dev/null; then
+              echo "使用 Docker 部署..."
+              docker build -t seek-self-panel:$1 .
+              docker run -d -p 3000:3000 --name seek-self-panel-$1 seek-self-panel:$1
+              echo "Docker 部署完成，访问地址: http://localhost:3000"
+          else
+              echo "Docker 不可用，请手动部署 dist 目录到 Web 服务器"
+          fi
+          EOF
+          
+          chmod +x release-${{ github.event.release.tag_name }}/deploy.sh
 
-    - name: 创建发布包
-      run: |
-        # 创建发布目录
-        mkdir -p release
-        
-        # 复制 dist 目录
-        cp -r dist release/
-        
-        # 复制 Dockerfile 和 nginx.conf
-        cp Dockerfile release/
-        cp nginx.conf release/
-        
-        # 创建 README 文件
-        cat > release/README.md << EOF
-        # 部署说明
-        
-        ## 文件说明
-        - \`dist/\`: 构建后的静态文件
-        - \`Dockerfile\`: Docker 构建文件
-        - \`nginx.conf\`: Nginx 配置文件
-        
-        ## 部署方式
-        
-        ### 方式一：使用 Docker
-        \`\`\`bash
-        docker build -t seek-self-panel .
-        docker run -p 3000:3000 seek-self-panel
-        \`\`\`
-        
-        ### 方式二：直接部署
-        将 \`dist\` 目录内容部署到 Web 服务器即可。
-        
-        ## 构建信息
-        - 构建时间: $(date)
-        - 构建分支: ${{ github.ref_name }}
-        - 提交哈希: ${{ github.sha }}
-        EOF
+      - name: 压缩发布包
+        run: |
+          tar -czf seek-self-panel-${{ github.event.release.tag_name }}.tar.gz release-${{ github.event.release.tag_name }}/
+          zip -r seek-self-panel-${{ github.event.release.tag_name }}.zip release-${{ github.event.release.tag_name }}/
 
-    - name: 上传发布包
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-package
-        path: release/
-        retention-days: 90
+      - name: 上传发布包到 Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./seek-self-panel-${{ github.event.release.tag_name }}.tar.gz
+          asset_name: seek-self-panel-${{ github.event.release.tag_name }}.tar.gz
+          asset_content_type: application/gzip
 
-    - name: 输出构建信息
-      run: |
-        echo "构建完成！"
-        echo "分支: ${{ github.ref_name }}"
-        echo "提交: ${{ github.sha }}"
-        echo "时间: $(date)"
-        echo "Node版本: $(node --version)"
-        echo "NPM版本: $(npm --version)" 
+      - name: 上传 ZIP 包到 Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./seek-self-panel-${{ github.event.release.tag_name }}.zip
+          asset_name: seek-self-panel-${{ github.event.release.tag_name }}.zip
+          asset_content_type: application/zip
+
+      - name: 输出发布信息
+        run: |
+          echo "发布完成！"
+          echo "版本: ${{ github.event.release.tag_name }}"
+          echo "发布说明: ${{ github.event.release.body }}"
+          echo "发布时间: ${{ github.event.release.published_at }}"
+          echo "构建时间: $(date)"
