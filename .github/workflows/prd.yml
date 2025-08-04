@@ -2,9 +2,9 @@ name: 发布构建
 
 on:
   push:
-    branches: [ main, prd ]
+    branches: [ main, prd, release ]
   pull_request:
-    branches: [ main, prd ]
+    branches: [ main, prd, release ]
   release:
     types: [ published ]
 
@@ -99,6 +99,124 @@ jobs:
           echo "提交哈希: ${{ github.sha }}"
           echo "构建时间: $(date)"
           echo "产物已上传到 Actions Artifacts"
+
+  auto-release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/release' && github.event_name == 'push'
+    needs: build
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: 'panel/yarn.lock'
+
+      - name: 安装依赖
+        run: |
+          cd panel
+          yarn install --frozen-lockfile
+
+      - name: 构建前端项目
+        run: |
+          cd panel
+          yarn build
+
+      - name: 生成版本号
+        id: version
+        run: |
+          # 获取当前时间作为版本号
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          VERSION="v1.0.0-${TIMESTAMP}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "生成的版本号: $VERSION"
+
+      - name: 创建发布包
+        run: |
+          # 创建发布目录
+          mkdir -p release-${{ steps.version.outputs.version }}
+          
+          # 复制前端构建结果
+          cp -r panel/dist release-${{ steps.version.outputs.version }}/
+          
+          # 复制前端 Dockerfile 和 nginx.conf
+          cp panel/Dockerfile release-${{ steps.version.outputs.version }}/
+          cp panel/nginx.conf release-${{ steps.version.outputs.version }}/
+          
+          # 创建版本信息文件
+          cat > release-${{ steps.version.outputs.version }}/VERSION << EOF
+          版本: ${{ steps.version.outputs.version }}
+          发布时间: $(date)
+          发布说明: 自动发布 - Release 分支构建
+          构建时间: $(date)
+          提交哈希: ${{ github.sha }}
+          分支: ${{ github.ref_name }}
+          EOF
+          
+          # 创建部署脚本
+          cat > release-${{ steps.version.outputs.version }}/deploy.sh << 'EOF'
+          #!/bin/bash
+          
+          echo "开始部署 seek-self-panel..."
+          
+          # 检查 Docker 是否可用
+          if command -v docker &> /dev/null; then
+              echo "使用 Docker 部署..."
+              docker build -t seek-self-panel:$1 .
+              docker run -d -p 3000:3000 --name seek-self-panel-$1 seek-self-panel:$1
+              echo "Docker 部署完成，访问地址: http://localhost:3000"
+          else
+              echo "Docker 不可用，请手动部署 dist 目录到 Web 服务器"
+          fi
+          EOF
+          
+          chmod +x release-${{ steps.version.outputs.version }}/deploy.sh
+
+      - name: 压缩发布包
+        run: |
+          tar -czf seek-self-panel-${{ steps.version.outputs.version }}.tar.gz release-${{ steps.version.outputs.version }}/
+          zip -r seek-self-panel-${{ steps.version.outputs.version }}.zip release-${{ steps.version.outputs.version }}/
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "Seek Self Panel ${{ steps.version.outputs.version }}"
+          body: |
+            ## 自动发布
+            
+            **版本:** ${{ steps.version.outputs.version }}
+            **分支:** ${{ github.ref_name }}
+            **提交:** ${{ github.sha }}
+            **构建时间:** $(date)
+            
+            ### 更新内容
+            - 自动构建和发布
+            - Release 分支合并触发
+            
+            ### 下载
+            - [seek-self-panel-${{ steps.version.outputs.version }}.tar.gz](seek-self-panel-${{ steps.version.outputs.version }}.tar.gz)
+            - [seek-self-panel-${{ steps.version.outputs.version }}.zip](seek-self-panel-${{ steps.version.outputs.version }}.zip)
+          files: |
+            seek-self-panel-${{ steps.version.outputs.version }}.tar.gz
+            seek-self-panel-${{ steps.version.outputs.version }}.zip
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 输出发布信息
+        run: |
+          echo "自动发布完成！"
+          echo "版本: ${{ steps.version.outputs.version }}"
+          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}"
+          echo "构建时间: $(date)"
 
   release-build:
     runs-on: ubuntu-latest
