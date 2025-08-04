@@ -2,11 +2,22 @@ name: 发布构建
 
 on:
   push:
-    branches: [ main, prd, release ]
+    branches: [ release ]
   pull_request:
-    branches: [ main, prd, release ]
+    branches: [ release ]
   release:
     types: [ published ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '要构建的分支'
+        required: true
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - prd
+          - release
 
 # 添加权限配置
 permissions:
@@ -16,11 +27,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.event_name != 'release' && github.ref != 'refs/heads/release'
+    if: github.event_name == 'workflow_dispatch'
 
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
 
       - name: 设置 Node.js 环境
         uses: actions/setup-node@v4
@@ -54,6 +67,7 @@ jobs:
           # 创建构建信息文件
           cat > build-${{ github.sha }}/BUILD_INFO << EOF
           分支: ${{ github.ref_name }}
+          手动触发分支: ${{ github.event.inputs.branch }}
           提交哈希: ${{ github.sha }}
           构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
           触发事件: ${{ github.event_name }}
@@ -96,6 +110,7 @@ jobs:
         run: |
           echo "构建完成！"
           echo "分支: ${{ github.ref_name }}"
+          echo "手动触发分支: ${{ github.event.inputs.branch }}"
           echo "提交哈希: ${{ github.sha }}"
           echo "构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')"
           echo "产物已上传到 Actions Artifacts"
