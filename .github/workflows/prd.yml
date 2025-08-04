@@ -16,7 +16,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.event_name != 'release'
+    if: github.event_name != 'release' && github.ref != 'refs/heads/release'
 
     steps:
       - name: 检出代码
@@ -55,7 +55,7 @@ jobs:
           cat > build-${{ github.sha }}/BUILD_INFO << EOF
           分支: ${{ github.ref_name }}
           提交哈希: ${{ github.sha }}
-          构建时间: $(date)
+          构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
           触发事件: ${{ github.event_name }}
           EOF
           
@@ -97,13 +97,12 @@ jobs:
           echo "构建完成！"
           echo "分支: ${{ github.ref_name }}"
           echo "提交哈希: ${{ github.sha }}"
-          echo "构建时间: $(date)"
+          echo "构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')"
           echo "产物已上传到 Actions Artifacts"
 
   auto-release:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/release' && github.event_name == 'push'
-    needs: build
 
     steps:
       - name: 检出代码
@@ -128,14 +127,17 @@ jobs:
           cd panel
           yarn build
 
-      - name: 生成版本号
+      - name: 生成版本号和时间
         id: version
         run: |
           # 获取当前时间作为版本号
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          BUILD_TIME=$(date '+%Y-%m-%d %H:%M:%S UTC')
           VERSION="v1.0.0-${TIMESTAMP}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
           echo "生成的版本号: $VERSION"
+          echo "构建时间: $BUILD_TIME"
 
       - name: 创建发布包
         run: |
@@ -152,9 +154,9 @@ jobs:
           # 创建版本信息文件
           cat > release-${{ steps.version.outputs.version }}/VERSION << EOF
           版本: ${{ steps.version.outputs.version }}
-          发布时间: $(date)
+          发布时间: ${{ steps.version.outputs.build_time }}
           发布说明: 自动发布 - Release 分支构建
-          构建时间: $(date)
+          构建时间: ${{ steps.version.outputs.build_time }}
           提交哈希: ${{ github.sha }}
           分支: ${{ github.ref_name }}
           EOF
@@ -194,7 +196,7 @@ jobs:
             **版本:** ${{ steps.version.outputs.version }}
             **分支:** ${{ github.ref_name }}
             **提交:** ${{ github.sha }}
-            **构建时间:** $(date)
+            **构建时间:** ${{ steps.version.outputs.build_time }}
             
             ### 更新内容
             - 自动构建和发布
@@ -207,7 +209,7 @@ jobs:
             seek-self-panel-${{ steps.version.outputs.version }}.tar.gz
             seek-self-panel-${{ steps.version.outputs.version }}.zip
           draft: false
-          prerelease: true
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -216,7 +218,7 @@ jobs:
           echo "自动发布完成！"
           echo "版本: ${{ steps.version.outputs.version }}"
           echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}"
-          echo "构建时间: $(date)"
+          echo "构建时间: ${{ steps.version.outputs.build_time }}"
 
   release-build:
     runs-on: ubuntu-latest
@@ -260,7 +262,7 @@ jobs:
           版本: ${{ github.event.release.tag_name }}
           发布时间: ${{ github.event.release.published_at }}
           发布说明: ${{ github.event.release.body }}
-          构建时间: $(date)
+          构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
           提交哈希: ${{ github.sha }}
           EOF
           
@@ -314,4 +316,4 @@ jobs:
           echo "版本: ${{ github.event.release.tag_name }}"
           echo "发布说明: ${{ github.event.release.body }}"
           echo "发布时间: ${{ github.event.release.published_at }}"
-          echo "构建时间: $(date)"
+          echo "构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')"
