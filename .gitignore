@@ -6,7 +6,6 @@ dist
 .cache
 
 
-docker-compose.yml
 tests/server/static
 tests/server/static/upload
 
