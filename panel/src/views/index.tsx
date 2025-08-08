@@ -3,10 +3,12 @@ import NotFound from './not-found.vue'
 import * as Vue from 'vue'
 import {loadModule} from 'vue3-sfc-loader'
 import {App} from "@/modules/app/type";
+import * as hooks from '@/hooks'
 
 const options = {
     moduleCache: {
-        vue: Vue
+        vue: Vue,
+        '@/hooks':hooks
     },
     async getFile(url) {
         const res = await fetch(url);
@@ -25,7 +27,6 @@ const options = {
 
 
 const map = {
-    test: createAsyncComponent(() => import('./test.vue')),
     loginRegister: createAsyncComponent(() => import('@/desktop/side/avatar/login-register.vue')),
     userProfile: createAsyncComponent(() => import('@/desktop/side/avatar/user-profile.vue')),
     appManage: createAsyncComponent(() => import('@/modules/app/items/app-manage/index.vue')),
