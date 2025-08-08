@@ -54,13 +54,17 @@ jobs:
 
       - name: 创建构建产物
         run: |
-          # 创建构建目录
-          mkdir -p build-${{ github.sha }}
+          # 创建构建目录与 panel 子目录
+          mkdir -p build-${{ github.sha }}/panel
           
-          # 复制前端构建结果
-          cp -r panel/dist build-${{ github.sha }}/
+          # 复制前端构建结果到 panel 下
+          cp -r panel/dist build-${{ github.sha }}/panel/
           
-          # 复制 Docker 相关文件
+          # 复制 Dockerfile 与 nginx.conf 到 panel 下
+          cp panel/Dockerfile build-${{ github.sha }}/panel/
+          cp panel/nginx.conf build-${{ github.sha }}/panel/
+          
+          # 复制根层 Docker 相关文件
           cp docker-compose.yml build-${{ github.sha }}/
           cp -r nginx build-${{ github.sha }}/
           cp -r server build-${{ github.sha }}/
@@ -156,13 +160,17 @@ jobs:
 
       - name: 创建发布包
         run: |
-          # 创建发布目录
-          mkdir -p release-${{ steps.version.outputs.version }}
+          # 创建发布目录与 panel 子目录
+          mkdir -p release-${{ steps.version.outputs.version }}/panel
           
-          # 复制前端构建结果
-          cp -r panel/dist release-${{ steps.version.outputs.version }}/
+          # 复制前端构建结果到 panel 下
+          cp -r panel/dist release-${{ steps.version.outputs.version }}/panel/
           
-          # 复制 Docker 相关文件
+          # 复制 Dockerfile 与 nginx.conf 到 panel 下
+          cp panel/Dockerfile release-${{ steps.version.outputs.version }}/panel/
+          cp panel/nginx.conf release-${{ steps.version.outputs.version }}/panel/
+          
+          # 复制根层 Docker 相关文件
           cp docker-compose.yml release-${{ steps.version.outputs.version }}/
           cp -r nginx release-${{ steps.version.outputs.version }}/
           cp -r server release-${{ steps.version.outputs.version }}/
@@ -262,43 +270,20 @@ jobs:
 
       - name: 创建发布包
         run: |
-          # 创建发布目录
-          mkdir -p release-${{ github.event.release.tag_name }}
+          # 创建发布目录与 panel 子目录
+          mkdir -p release-${{ github.event.release.tag_name }}/panel
           
-          # 复制前端构建结果
-          cp -r panel/dist release-${{ github.event.release.tag_name }}/
+          # 复制前端构建结果到 panel 下
+          cp -r panel/dist release-${{ github.event.release.tag_name }}/panel/
           
-          # 复制 Docker 相关文件
+          # 复制 Dockerfile 与 nginx.conf 到 panel 下
+          cp panel/Dockerfile release-${{ github.event.release.tag_name }}/panel/
+          cp panel/nginx.conf release-${{ github.event.release.tag_name }}/panel/
+          
+          # 复制根层 Docker 相关文件
           cp docker-compose.yml release-${{ github.event.release.tag_name }}/
           cp -r nginx release-${{ github.event.release.tag_name }}/
           cp -r server release-${{ github.event.release.tag_name }}/
-          
-          # 创建版本信息文件
-          cat > release-${{ github.event.release.tag_name }}/VERSION << EOF
-          版本: ${{ github.event.release.tag_name }}
-          发布时间: ${{ github.event.release.published_at }}
-          发布说明: ${{ github.event.release.body }}
-          构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
-          提交哈希: ${{ github.sha }}
-          EOF
-          
-          # 创建部署脚本
-          cat > release-${{ github.event.release.tag_name }}/deploy.sh << 'EOF'
-          #!/bin/bash
-          
-          echo "开始部署 seek-self..."
-          
-          # 检查 Docker 是否可用
-          if command -v docker &> /dev/null; then
-              echo "使用 Docker Compose 部署..."
-              docker-compose up -d --build
-              echo "Docker 部署完成，访问地址: http://localhost:10000"
-          else
-              echo "Docker 不可用，请手动部署"
-          fi
-          EOF
-          
-          chmod +x release-${{ github.event.release.tag_name }}/deploy.sh
 
       - name: 压缩发布包
         run: |
