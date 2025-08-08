@@ -1,0 +1,75 @@
+version: '1.5'
+
+services:
+  # MySQL 数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: seek-self-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: seek_self
+      MYSQL_USER: seek_user
+      MYSQL_PASSWORD: seek_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # 前端服务
+  panel:
+    build:
+      context: ./panel
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # 后端 API 服务
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 20000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: seek_user
+      DB_PASSWORD: seek_password
+      DB_DATABASE: seek_self
+      JWT_SECRET: your-secret-key
+      JWT_EXPIRES_IN: 24h
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "10000:80"  # 主端口
+      - "10443:443"  # HTTPS 端口（可选）
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - server
+      - panel
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
