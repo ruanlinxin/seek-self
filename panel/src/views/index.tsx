@@ -4,11 +4,15 @@ import * as Vue from 'vue'
 import {loadModule} from 'vue3-sfc-loader'
 import {App} from "@/modules/app/type";
 import * as hooks from '@/hooks'
+import * as arco from '@arco-design/web-vue';
+import * as nanoid from 'nanoid'
 
 const options = {
     moduleCache: {
         vue: Vue,
-        'hooks':hooks
+        'hooks':hooks,
+        '@arco-design/web-vue': arco,
+        nanoid:nanoid
     },
     async getFile(url) {
         const res = await fetch(url);
