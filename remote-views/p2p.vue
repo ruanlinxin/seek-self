@@ -4,22 +4,22 @@
       <h2>P2P 聊天</h2>
       <div class="my-id">我的ID: {{ id || '连接中...' }}</div>
     </div>
-    
+
     <div class="connection-section">
-      <a-input 
-        v-model="view.targetId" 
+      <a-input
+        v-model="view.targetId"
         placeholder="请输入对方的ID"
         class="target-input"
       />
-      <a-button 
-        @click="connect" 
+      <a-button
+        @click="connect"
         :disabled="isConnected || !view.targetId"
         type="primary"
       >
         {{ isConnected ? '已连接' : '连接' }}
       </a-button>
-      <a-button 
-        @click="disconnect" 
+      <a-button
+        @click="disconnect"
         :disabled="!isConnected"
         status="danger"
       >
@@ -29,8 +29,8 @@
 
     <div class="chat-container">
       <div class="messages" ref="messagesRef">
-        <div 
-          v-for="(item, index) in view.messages" 
+        <div
+          v-for="(item, index) in view.messages"
           :key="index"
           :class="['message', item.type]"
         >
@@ -38,7 +38,7 @@
           <div class="message-content">
             <!-- 文本消息 -->
             <div v-if="item.messageType === 'text'">{{ item.content }}</div>
-            
+
             <!-- 文件传输申请 -->
             <div v-else-if="item.messageType === 'file-request'" class="file-request">
               <div class="file-info">
@@ -46,23 +46,23 @@
                 <div class="file-size">{{ formatFileSize(item.fileSize) }}</div>
               </div>
               <div class="file-actions">
-                <a-button 
-                  @click="acceptFileTransfer(item)" 
-                  size="mini" 
+                <a-button
+                  @click="acceptFileTransfer(item)"
+                  size="mini"
                   type="primary"
                 >
                   接受
                 </a-button>
-                <a-button 
-                  @click="rejectFileTransfer(item)" 
-                  size="mini" 
+                <a-button
+                  @click="rejectFileTransfer(item)"
+                  size="mini"
                   status="danger"
                 >
                   拒绝
                 </a-button>
               </div>
             </div>
-            
+
             <!-- 文件传输进度 -->
             <div v-else-if="item.messageType === 'file-transfer'" class="file-transfer">
               <div class="file-info">
@@ -70,8 +70,8 @@
                 <div class="file-size">{{ formatFileSize(item.fileSize) }}</div>
               </div>
               <div class="transfer-progress">
-                <a-progress 
-                  :percent="item.progress || 0" 
+                <a-progress
+                  :percent="item.progress || 0"
                   :status="item.progress === 100 ? 'success' : 'normal'"
                   size="small"
                 />
@@ -80,16 +80,16 @@
                 </div>
               </div>
               <div class="file-actions" v-if="item.progress === 100 && item.fileData">
-                <a-button 
-                  @click="downloadFile(item)" 
-                  size="mini" 
+                <a-button
+                  @click="downloadFile(item)"
+                  size="mini"
                   type="primary"
                 >
                   下载文件
                 </a-button>
               </div>
             </div>
-            
+
             <!-- 系统消息 -->
             <div v-else-if="item.messageType === 'system'" class="system-message">
               {{ item.content }}
@@ -97,16 +97,16 @@
           </div>
         </div>
       </div>
-      
+
       <div class="input-section">
-        <a-input 
-          v-model="view.input" 
+        <a-input
+          v-model="view.input"
           placeholder="输入消息..."
           @keyup.enter="sendMessage"
           :disabled="!isConnected"
         />
-        <a-button 
-          @click="sendMessage" 
+        <a-button
+          @click="sendMessage"
           :disabled="!isConnected || !view.input.trim()"
           type="primary"
         >
@@ -121,14 +121,11 @@
             :disabled="!isConnected"
             multiple
           />
-          <a-button 
+          <a-button
             @click="triggerFileSelect"
             :disabled="!isConnected"
             class="file-button"
           >
-            <template #icon>
-              <icon-attachment />
-            </template>
             文件
           </a-button>
         </div>
@@ -138,9 +135,8 @@
 </template>
 
 <script setup lang="ts">
-import { usePeer } from "@/hooks";
-import { nextTick } from 'vue';
-import { IconAttachment } from '@arco-design/web-vue/es/icon';
+import { usePeer } from "hooks";
+import { nextTick,ref,reactive } from 'vue';
 
 interface FileRequest {
   id: string;
@@ -217,14 +213,14 @@ p.on('connection', function(conn) {
 const connect = () => {
   console.log('connect', view.targetId);
   if (!view.targetId.trim()) return;
-  
+
   const conn = p.connect(view.targetId);
   handleConnection(conn);
 };
 
 const handleConnection = (conn: any) => {
   currentConnection.value = conn;
-  
+
   conn.on('open', function() {
     console.log('连接已建立');
     isConnected.value = true;
@@ -233,7 +229,7 @@ const handleConnection = (conn: any) => {
 
   conn.on('data', function(data) {
     console.log('收到数据:', data);
-    
+
     if (data.type === 'file-request') {
       handleFileRequest(data);
     } else if (data.type === 'file-chunk') {
@@ -282,7 +278,7 @@ const sendMessage = () => {
     }
     return;
   }
-  
+
   const message = view.input.trim();
   try {
     currentConnection.value.send(message);
@@ -300,13 +296,13 @@ const handleFileSelect = (event: Event) => {
     addMessage('连接未建立，无法发送文件', 'sent', 'system');
     return;
   }
-  
+
   const files = target.files;
   if (!files || files.length === 0) return;
-  
+
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    
+
     // 文件大小限制 (100MB)
     if (file.size > 100 * 1024 * 1024) {
       addMessage(`文件 "${file.name}" 大小超过限制 (100MB)`, 'sent', 'system');
@@ -321,15 +317,15 @@ const handleFileSelect = (event: Event) => {
       fileSize: file.size,
       chunks: Math.ceil(file.size / (64 * 1024)) // 64KB chunks
     };
-    
+
     const message = addMessage('', 'sent', 'file-request');
     message.fileName = file.name;
     message.fileSize = file.size;
     message.requestId = requestId;
-    
+
     // 存储文件引用
     pendingFiles.set(requestId, file);
-    
+
     try {
       currentConnection.value.send({
         type: 'file-request',
@@ -341,7 +337,7 @@ const handleFileSelect = (event: Event) => {
       pendingFiles.delete(requestId);
     }
   }
-  
+
   // 清理input值，允许重复选择同一文件
   if (target) {
     target.value = '';
@@ -366,19 +362,19 @@ const acceptFileTransfer = (message: Message) => {
     addMessage('连接未建立，无法接受文件', 'received', 'system');
     return;
   }
-  
+
   try {
     // 发送接受响应
     currentConnection.value.send({
       type: 'file-accept',
       requestId: message.requestId
     });
-    
+
     // 更新消息为传输状态
     message.messageType = 'file-transfer';
     message.progress = 0;
     message.transferred = 0;
-    
+
     // 初始化文件传输状态
     fileTransfers.set(message.requestId, {
       chunks: [],
@@ -399,14 +395,14 @@ const rejectFileTransfer = (message: Message) => {
     addMessage('连接未建立，无法拒绝文件', 'received', 'system');
     return;
   }
-  
+
   try {
     // 发送拒绝响应
     currentConnection.value.send({
       type: 'file-reject',
       requestId: message.requestId
     });
-    
+
     // 更新消息
     message.messageType = 'system';
     message.content = '文件传输被拒绝';
@@ -423,7 +419,7 @@ const handleFileAccept = (data: { requestId: string }) => {
     message.messageType = 'file-transfer';
     message.progress = 0;
     message.transferred = 0;
-    
+
     // 开始读取并发送文件
     startFileTransfer(message);
   }
@@ -444,10 +440,10 @@ const startFileTransfer = async (message: Message) => {
     message.content = '文件传输失败：文件不存在';
     return;
   }
-  
+
   const chunkSize = 64 * 1024; // 64KB
   const totalChunks = Math.ceil(file.size / chunkSize);
-  
+
   try {
     for (let i = 0; i < totalChunks; i++) {
       // 检查连接状态
@@ -457,21 +453,21 @@ const startFileTransfer = async (message: Message) => {
         pendingFiles.delete(message.requestId!);
         return;
       }
-      
+
       const start = i * chunkSize;
       const end = Math.min(start + chunkSize, file.size);
       const chunk = file.slice(start, end);
-      
+
       // 读取文件块
       const arrayBuffer = await chunk.arrayBuffer();
-      
+
       const fileChunk: FileChunk = {
         id: message.requestId!,
         chunkIndex: i,
         data: arrayBuffer,
         isLast: i === totalChunks - 1
       };
-      
+
       try {
         currentConnection.value.send({
           type: 'file-chunk',
@@ -484,18 +480,18 @@ const startFileTransfer = async (message: Message) => {
         pendingFiles.delete(message.requestId!);
         return;
       }
-      
+
       // 更新进度
       message.progress = Math.round(((i + 1) / totalChunks) * 100);
       message.transferred = end;
-      
+
       // 添加小延迟避免阻塞
       await new Promise(resolve => setTimeout(resolve, 10));
     }
-    
+
     // 清理文件引用
     pendingFiles.delete(message.requestId!);
-    
+
   } catch (error) {
     console.error('文件传输错误:', error);
     message.messageType = 'system';
@@ -507,33 +503,33 @@ const startFileTransfer = async (message: Message) => {
 const handleFileChunk = (data: FileChunk) => {
   const transfer = fileTransfers.get(data.id);
   if (!transfer) return;
-  
+
   // 存储数据块
   transfer.chunks[data.chunkIndex] = data.data;
   transfer.receivedChunks++;
-  
+
   // 更新进度
   const message = view.messages[transfer.messageIndex];
   if (message) {
     message.progress = Math.round((transfer.receivedChunks / transfer.totalChunks) * 100);
     message.transferred = Math.min(transfer.receivedChunks * 64 * 1024, transfer.fileSize);
-    
+
     // 检查是否接收完成
     if (data.isLast && transfer.receivedChunks === transfer.totalChunks) {
       // 合并所有数据块
       const totalSize = transfer.chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
       const mergedData = new ArrayBuffer(totalSize);
       const uint8Array = new Uint8Array(mergedData);
-      
+
       let offset = 0;
       for (const chunk of transfer.chunks) {
         uint8Array.set(new Uint8Array(chunk), offset);
         offset += chunk.byteLength;
       }
-      
+
       message.fileData = mergedData;
       message.content = '文件传输完成';
-      
+
       // 清理传输状态
       fileTransfers.delete(data.id);
     }
@@ -547,22 +543,22 @@ const addMessage = (content: string, type: 'sent' | 'received', messageType: 'te
     timestamp: new Date(),
     messageType
   };
-  
+
   view.messages.push(message);
-  
+
   // 自动滚动到底部
   nextTick(() => {
     if (messagesRef.value) {
       messagesRef.value.scrollTop = messagesRef.value.scrollHeight;
     }
   });
-  
+
   return message;
 };
 
 const downloadFile = (message: Message) => {
   if (!message.fileData) return;
-  
+
   const blob = new Blob([message.fileData]);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -579,8 +575,8 @@ const generateId = () => {
 };
 
 const formatTime = (date: Date) => {
-  return date.toLocaleTimeString('zh-CN', { 
-    hour: '2-digit', 
+  return date.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
   });

@@ -12,10 +12,13 @@
 import {TargetTiming} from '@/modules/widgets/components'
 import {BasicWindow } from '@/modules/basic/components'
 import Side from './side/index.vue'
-import {getAppsStore} from "@/store";
+import {getAppsStore, getBasicStore} from "@/store";
 import ToolsModal from './tools-modal/index.vue'
 
 const appsStore = getAppsStore()
+const basicStore = getBasicStore()
+
+const background = computed(()=>basicStore.env.background || '#fff')
 </script>
 <style scoped lang="less">
 .desktop {
@@ -24,8 +27,7 @@ const appsStore = getAppsStore()
   position: relative;
   display: flex;
   flex-direction: row;
-  //background: url("https://bing.img.run/rand.php");
-  background: #f6f6f6;
+  background: v-bind(background);
 
   .desktop-view {
     flex: 1;
