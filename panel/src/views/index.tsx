@@ -35,8 +35,8 @@ const map = {
     userProfile: createAsyncComponent(() => import('@/desktop/side/avatar/user-profile.vue')),
     appManage: createAsyncComponent(() => import('@/modules/app/items/app-manage/index.vue')),
     dataDict: createAsyncComponent(() => import('@/modules/app/items/data-dictionary/index.vue')),
-    randomChar: createAsyncComponent(() => import('@/modules/app/items/random-char/index.vue')),
-    p2p:createAsyncComponent(() => import('@/modules/app/items/p2p/index.vue')),
+    // randomChar: createAsyncComponent(() => import('@/modules/app/items/random-char/index.vue')),
+    // p2p:createAsyncComponent(() => import('@/modules/app/items/p2p/index.vue')),
 }
 export const componentKeys = Object.keys(map)
 type MapKeys = keyof typeof map
