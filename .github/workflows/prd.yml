@@ -60,9 +60,10 @@ jobs:
           # 复制前端构建结果
           cp -r panel/dist build-${{ github.sha }}/
           
-          # 复制前端 Dockerfile 和 nginx.conf
-          cp panel/Dockerfile build-${{ github.sha }}/
-          cp panel/nginx.conf build-${{ github.sha }}/
+          # 复制 Docker 相关文件
+          cp docker-compose.yml build-${{ github.sha }}/
+          cp -r nginx build-${{ github.sha }}/
+          cp -r server build-${{ github.sha }}/
           
           # 创建构建信息文件
           cat > build-${{ github.sha }}/BUILD_INFO << EOF
@@ -77,16 +78,15 @@ jobs:
           cat > build-${{ github.sha }}/deploy.sh << 'EOF'
           #!/bin/bash
           
-          echo "开始部署 seek-self-panel..."
+          echo "开始部署 seek-self..."
           
           # 检查 Docker 是否可用
           if command -v docker &> /dev/null; then
-              echo "使用 Docker 部署..."
-              docker build -t seek-self-panel:latest .
-              docker run -d -p 3000:3000 --name seek-self-panel seek-self-panel:latest
-              echo "Docker 部署完成，访问地址: http://localhost:3000"
+              echo "使用 Docker Compose 部署..."
+              docker-compose up -d --build
+              echo "Docker 部署完成，访问地址: http://localhost:10000"
           else
-              echo "Docker 不可用，请手动部署 dist 目录到 Web 服务器"
+              echo "Docker 不可用，请手动部署"
           fi
           EOF
           
@@ -162,9 +162,10 @@ jobs:
           # 复制前端构建结果
           cp -r panel/dist release-${{ steps.version.outputs.version }}/
           
-          # 复制前端 Dockerfile 和 nginx.conf
-          cp panel/Dockerfile release-${{ steps.version.outputs.version }}/
-          cp panel/nginx.conf release-${{ steps.version.outputs.version }}/
+          # 复制 Docker 相关文件
+          cp docker-compose.yml release-${{ steps.version.outputs.version }}/
+          cp -r nginx release-${{ steps.version.outputs.version }}/
+          cp -r server release-${{ steps.version.outputs.version }}/
           
           # 创建版本信息文件
           cat > release-${{ steps.version.outputs.version }}/VERSION << EOF
@@ -180,16 +181,15 @@ jobs:
           cat > release-${{ steps.version.outputs.version }}/deploy.sh << 'EOF'
           #!/bin/bash
           
-          echo "开始部署 seek-self-panel..."
+          echo "开始部署 seek-self..."
           
           # 检查 Docker 是否可用
           if command -v docker &> /dev/null; then
-              echo "使用 Docker 部署..."
-              docker build -t seek-self-panel:$1 .
-              docker run -d -p 3000:3000 --name seek-self-panel-$1 seek-self-panel:$1
-              echo "Docker 部署完成，访问地址: http://localhost:3000"
+              echo "使用 Docker Compose 部署..."
+              docker-compose up -d --build
+              echo "Docker 部署完成，访问地址: http://localhost:10000"
           else
-              echo "Docker 不可用，请手动部署 dist 目录到 Web 服务器"
+              echo "Docker 不可用，请手动部署"
           fi
           EOF
           
@@ -268,9 +268,10 @@ jobs:
           # 复制前端构建结果
           cp -r panel/dist release-${{ github.event.release.tag_name }}/
           
-          # 复制前端 Dockerfile 和 nginx.conf
-          cp panel/Dockerfile release-${{ github.event.release.tag_name }}/
-          cp panel/nginx.conf release-${{ github.event.release.tag_name }}/
+          # 复制 Docker 相关文件
+          cp docker-compose.yml release-${{ github.event.release.tag_name }}/
+          cp -r nginx release-${{ github.event.release.tag_name }}/
+          cp -r server release-${{ github.event.release.tag_name }}/
           
           # 创建版本信息文件
           cat > release-${{ github.event.release.tag_name }}/VERSION << EOF
@@ -285,16 +286,15 @@ jobs:
           cat > release-${{ github.event.release.tag_name }}/deploy.sh << 'EOF'
           #!/bin/bash
           
-          echo "开始部署 seek-self-panel..."
+          echo "开始部署 seek-self..."
           
           # 检查 Docker 是否可用
           if command -v docker &> /dev/null; then
-              echo "使用 Docker 部署..."
-              docker build -t seek-self-panel:$1 .
-              docker run -d -p 3000:3000 --name seek-self-panel-$1 seek-self-panel:$1
-              echo "Docker 部署完成，访问地址: http://localhost:3000"
+              echo "使用 Docker Compose 部署..."
+              docker-compose up -d --build
+              echo "Docker 部署完成，访问地址: http://localhost:10000"
           else
-              echo "Docker 不可用，请手动部署 dist 目录到 Web 服务器"
+              echo "Docker 不可用，请手动部署"
           fi
           EOF
           
