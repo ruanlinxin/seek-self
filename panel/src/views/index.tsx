@@ -8,7 +8,7 @@ import * as hooks from '@/hooks'
 const options = {
     moduleCache: {
         vue: Vue,
-        '@/hooks':hooks
+        'hooks':hooks
     },
     async getFile(url) {
         const res = await fetch(url);

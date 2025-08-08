@@ -135,8 +135,8 @@
 </template>
 
 <script setup lang="ts">
-import { usePeer } from "@/hooks";
-import { nextTick } from 'vue';
+import { usePeer } from "hooks";
+import { nextTick,ref,reactive } from 'vue';
 
 interface FileRequest {
   id: string;
