@@ -13,7 +13,8 @@ RUN npm install -g peer
 COPY config.js /app/config.js
 
 # 创建启动脚本
-RUN echo '#!/bin/sh\npeer --config /app/config.js' > /app/start.sh && \
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'peerjs --port 9000 --host 0.0.0.0 --key seek-self-peerjs-key --allow_discovery --proxied --debug' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # 暴露端口

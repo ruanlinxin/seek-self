@@ -1,6 +1,6 @@
 module.exports = {
   // 服务器配置
-  port: process.env.PEERJS_PORT || 9000,
+  port: parseInt(process.env.PEERJS_PORT) || 9000,
   host: '0.0.0.0',
   
   // 安全配置
@@ -12,7 +12,7 @@ module.exports = {
   alive_timeout: parseInt(process.env.PEERJS_ALIVE_TIMEOUT) || 60000,
   
   // 代理和 S2S 配置
-  proxy: process.env.PEERJS_PROXY === 'true',
+  proxied: process.env.PEERJS_PROXY === 'true',
   s2s: process.env.PEERJS_S2S === 'true',
   
   // 调试配置

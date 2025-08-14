@@ -19,12 +19,16 @@ services:
     networks:
       - app-network
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # PeerJS 服务器
   peerjs-server:
-    build:
-      context: ./peerjs-server
-      dockerfile: Dockerfile
+    image: peerjs/peerjs-server:latest
     container_name: seek-self-peerjs
     restart: unless-stopped
     environment:
@@ -39,11 +43,6 @@ services:
     # 端口通过 nginx 转发，不需要直接暴露
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # 前端服务
   panel:

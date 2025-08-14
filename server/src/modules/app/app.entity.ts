@@ -33,7 +33,7 @@ export class App extends BaseEntity {
   @Column({ type: 'json', nullable: true, comment: '扩展信息' })
   appExtend: any;
 
-  @Column({ length: 100, nullable: true, comment: '组件key' })
+  @Column({ length: 1000, nullable: true, comment: '组件key' })
   componentKey: string;
 
   @Column({ length: 50, nullable: true, comment: '应用类型' })

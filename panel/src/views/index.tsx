@@ -57,6 +57,7 @@ export const getAsyncComponent = (entity: App.entity | string) => {
         case 'native':
             return map[key as MapKeys] || NotFound
         case 'sfcNative':
+            console.log(key,'key')
             return createAsyncComponent(() => loadModule(key,options))
         default:
             return NotFound
