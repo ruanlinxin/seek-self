@@ -35,8 +35,6 @@ const map = {
     userProfile: createAsyncComponent(() => import('@/desktop/side/avatar/user-profile.vue')),
     appManage: createAsyncComponent(() => import('@/modules/app/items/app-manage/index.vue')),
     dataDict: createAsyncComponent(() => import('@/modules/app/items/data-dictionary/index.vue')),
-    // randomChar: createAsyncComponent(() => import('@/modules/app/items/random-char/index.vue')),
-    // p2p:createAsyncComponent(() => import('@/modules/app/items/p2p/index.vue')),
 }
 export const componentKeys = Object.keys(map)
 type MapKeys = keyof typeof map
@@ -59,6 +57,7 @@ export const getAsyncComponent = (entity: App.entity | string) => {
         case 'native':
             return map[key as MapKeys] || NotFound
         case 'sfcNative':
+            console.log(key,'key')
             return createAsyncComponent(() => loadModule(key,options))
         default:
             return NotFound

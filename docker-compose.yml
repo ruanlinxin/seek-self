@@ -19,6 +19,30 @@ services:
     networks:
       - app-network
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PeerJS 服务器
+  peerjs-server:
+    image: peerjs/peerjs-server:latest
+    container_name: seek-self-peerjs
+    restart: unless-stopped
+    environment:
+      - PEERJS_PORT=9000
+      - PEERJS_KEY=seek-self-peerjs-key
+      - PEERJS_DEBUG=true
+      - PEERJS_ALLOW_DISCOVERY=true
+      - PEERJS_CONCURRENT_LIMIT=5000
+      - PEERJS_ALIVE_TIMEOUT=60000
+      - PEERJS_PROXY=true
+      - PEERJS_S2S=true
+    # 端口通过 nginx 转发，不需要直接暴露
+    networks:
+      - app-network
 
   # 前端服务
   panel:
@@ -26,8 +50,15 @@ services:
       context: ./panel
       dockerfile: Dockerfile
     restart: unless-stopped
+    environment:
+      - VITE_PEERJS_HOST=localhost
+      - VITE_PEERJS_PORT=10000
+      - VITE_PEERJS_PATH=/peerjs
+      - VITE_PEERJS_KEY=seek-self-peerjs-key
     networks:
       - app-network
+    depends_on:
+      - peerjs-server
 
   # 后端 API 服务
   server:
@@ -44,9 +75,14 @@ services:
       DB_DATABASE: seek_self
       JWT_SECRET: your-secret-key
       JWT_EXPIRES_IN: 24h
+      PEERJS_HOST: peerjs-server
+      PEERJS_PORT: 9000
+      PEERJS_KEY: seek-self-peerjs-key
     restart: unless-stopped
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+      - peerjs-server
     networks:
       - app-network
 
@@ -62,6 +98,7 @@ services:
     depends_on:
       - server
       - panel
+      - peerjs-server
     restart: unless-stopped
     networks:
       - app-network
