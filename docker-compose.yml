@@ -82,7 +82,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      - peerjs-server
+      peerjs-server:
+        condition: service_started
     networks:
       - app-network
 
