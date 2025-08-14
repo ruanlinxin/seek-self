@@ -58,8 +58,7 @@ services:
     networks:
       - app-network
     depends_on:
-      peerjs-server:
-        condition: service_healthy
+      - peerjs-server
 
   # 后端 API 服务
   server:
@@ -83,8 +82,7 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      peerjs-server:
-        condition: service_healthy
+      - peerjs-server
     networks:
       - app-network
 
