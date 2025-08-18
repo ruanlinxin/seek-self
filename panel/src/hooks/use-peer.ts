@@ -7,15 +7,13 @@ interface Options {
 }
 
 export default function usePeer(options?: Options) {
-    const res = new Peerjs({
+    const res = new Peerjs('',{
         debug: 2, // 启用调试日志
-        config: {
-            'iceServers': [
-                {urls:`stun:${location.host}/peerjs/`},
-                // { urls: 'stun:stun.l.google.com:19302' },
-                // { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        }
+        host: "seek-self.leyuwangyou.fun",
+        path: '/peerjs',
+        // host: "localhost",
+        // port:10000,
+        // path: '/peerjs',
     })
 
     res.on('open', function (id) {
