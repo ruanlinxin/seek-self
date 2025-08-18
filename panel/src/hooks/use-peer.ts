@@ -11,6 +11,7 @@ export default function usePeer(options?: Options) {
         debug: 2, // 启用调试日志
         host: "seek-self.leyuwangyou.fun",
         path: '/peerjs',
+        // peerjs本地服务连接
         // host: "localhost",
         // port:10000,
         // path: '/peerjs',
