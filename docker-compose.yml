@@ -7,6 +7,7 @@ services:
     container_name: seek-self-mysql
     restart: unless-stopped
     environment:
+      MYSQL_MAX_ALLOWED_PACKET: 64M
       MYSQL_ROOT_PASSWORD: root123456
       MYSQL_DATABASE: seek_self
       MYSQL_USER: seek_user
