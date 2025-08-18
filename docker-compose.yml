@@ -7,6 +7,7 @@ services:
     container_name: seek-self-mysql
     restart: unless-stopped
     environment:
+      MYSQL_MAX_ALLOWED_PACKET: 64M
       MYSQL_ROOT_PASSWORD: root123456
       MYSQL_DATABASE: seek_self
       MYSQL_USER: seek_user
@@ -33,16 +34,21 @@ services:
     restart: unless-stopped
     environment:
       - PEERJS_PORT=9000
+      - PEERJS_HOST=0.0.0.0
       - PEERJS_KEY=seek-self-peerjs-key
       - PEERJS_DEBUG=true
       - PEERJS_ALLOW_DISCOVERY=true
       - PEERJS_CONCURRENT_LIMIT=5000
       - PEERJS_ALIVE_TIMEOUT=60000
       - PEERJS_PROXY=true
-      - PEERJS_S2S=true
-    # 端口通过 nginx 转发，不需要直接暴露
+      - PEERJS_STUN_IP=0.0.0.0
+      - PEERJS_STUN_PORT=3478
+    ports:
+      - "3478:3478"  # STUN 端口
     networks:
       - app-network
+    depends_on:
+      - mysql
 
   # 前端服务
   panel:
@@ -58,7 +64,7 @@ services:
     networks:
       - app-network
     depends_on:
-      - peerjs-server
+      - server
 
   # 后端 API 服务
   server:
@@ -75,15 +81,10 @@ services:
       DB_DATABASE: seek_self
       JWT_SECRET: your-secret-key
       JWT_EXPIRES_IN: 24h
-      PEERJS_HOST: peerjs-server
-      PEERJS_PORT: 9000
-      PEERJS_KEY: seek-self-peerjs-key
     restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
-      peerjs-server:
-        condition: service_started
     networks:
       - app-network
 
