@@ -131,6 +131,7 @@ jobs:
           path: |
             web/dist/
             web/Dockerfile
+            web/nginx.conf
           retention-days: 30
 
 
@@ -233,6 +234,7 @@ jobs:
           mkdir -p deployment-package/web
           cp -r web/dist deployment-package/web/
           cp web/Dockerfile deployment-package/web/
+          cp web/nginx.conf deployment-package/web/
           
           # 创建 server 目录结构
           mkdir -p deployment-package/server
