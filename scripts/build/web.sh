@@ -32,7 +32,7 @@ log_error() {
 # 获取脚本所在目录的根目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-PANEL_DIR="$ROOT_DIR/panel"
+WEB_DIR="$ROOT_DIR/web"
 DIST_DIR="$ROOT_DIR/dist"
 
 # 生成版本号: 分支-构建时间-web
@@ -41,13 +41,13 @@ BUILD_TIME=$(date '+%Y%m%d-%H%M%S')
 VERSION="${BRANCH_NAME}-${BUILD_TIME}-web"
 
 log_info "项目根目录: $ROOT_DIR"
-log_info "Web端目录: $PANEL_DIR"
+log_info "Web端目录: $WEB_DIR"
 log_info "输出目录: $DIST_DIR"
 log_info "版本号: $VERSION"
 
 # 检查Web端目录是否存在
-if [ ! -d "$PANEL_DIR" ]; then
-    log_error "Web端目录不存在: $PANEL_DIR"
+if [ ! -d "$WEB_DIR" ]; then
+    log_error "Web端目录不存在: $WEB_DIR"
     exit 1
 fi
 
@@ -99,13 +99,13 @@ build_web() {
     cd "$ROOT_DIR"
     if [ -f ".yarnrc.yml" ] || [ -f "yarn.lock" ]; then
         log_info "使用 Yarn Workspace 执行构建..."
-        yarn workspace panel build
+        yarn workspace web build
     elif [ -f "lerna.json" ]; then
         log_info "使用 Lerna 执行构建..."
-        npx lerna exec --scope panel -- yarn build
+        npx lerna exec --scope web -- yarn build
     else
         log_info "直接在Web端目录执行构建..."
-        cd "$PANEL_DIR"
+        cd "$WEB_DIR"
         yarn build
     fi
     
@@ -121,22 +121,22 @@ copy_artifacts() {
     mkdir -p "$WEB_DIST_DIR"
     
     # 复制Web构建产物
-    if [ -d "$PANEL_DIR/dist" ]; then
-        cp -r "$PANEL_DIR/dist" "$WEB_DIST_DIR/"
+    if [ -d "$WEB_DIR/dist" ]; then
+        cp -r "$WEB_DIR/dist" "$WEB_DIST_DIR/"
         log_success "Web 静态文件已复制到: $WEB_DIST_DIR/dist"
     else
-        log_error "未找到 Web 构建产物: $PANEL_DIR/dist"
+        log_error "未找到 Web 构建产物: $WEB_DIR/dist"
         exit 1
     fi
     
     # 复制 Docker 相关文件
-    if [ -f "$PANEL_DIR/Dockerfile" ]; then
-        cp "$PANEL_DIR/Dockerfile" "$WEB_DIST_DIR/"
+    if [ -f "$WEB_DIR/Dockerfile" ]; then
+        cp "$WEB_DIR/Dockerfile" "$WEB_DIST_DIR/"
         log_info "Dockerfile 已复制"
     fi
     
-    if [ -f "$PANEL_DIR/nginx.conf" ]; then
-        cp "$PANEL_DIR/nginx.conf" "$WEB_DIST_DIR/"
+    if [ -f "$WEB_DIR/nginx.conf" ]; then
+        cp "$WEB_DIR/nginx.conf" "$WEB_DIST_DIR/"
         log_info "nginx.conf 已复制"
     fi
     
@@ -162,7 +162,7 @@ Web端构建信息
 版本号: $VERSION
 构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
 分支: $BRANCH_NAME
-构建目录: $PANEL_DIR
+构建目录: $WEB_DIR
 输出目录: $WEB_DIST_DIR
 Git 提交: $(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 

@@ -99,7 +99,7 @@ jobs:
           yarn workspaces list
 
       - name: Build web (Workspace)
-        run: yarn workspace panel build
+        run: yarn workspace web build
 
       - name: Create web build package
         run: |
@@ -107,9 +107,9 @@ jobs:
           mkdir -p dist/web
           
           # 复制构建产物
-          cp -r panel/dist dist/web/
-          cp panel/Dockerfile dist/web/
-          cp panel/nginx.conf dist/web/
+          cp -r web/dist dist/web/
+          cp web/Dockerfile dist/web/
+          cp web/nginx.conf dist/web/
           cp docker-compose.yml dist/
           cp -r nginx dist/
           
