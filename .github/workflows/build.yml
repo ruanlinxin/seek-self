@@ -101,8 +101,11 @@ jobs:
           yarn install --immutable
           yarn workspaces list
 
-      - name: Build web (Workspace)
-        run: yarn workspace web build
+      - name: Install Lerna globally
+        run: npm install -g lerna@^8.2.3
+
+      - name: Build web (Lerna)
+        run: lerna run build --scope=web
 
       - name: Create web build package
         run: |
@@ -281,6 +284,9 @@ jobs:
           yarn install --immutable
           yarn workspaces list
 
+      - name: Install Lerna globally
+        run: npm install -g lerna@^8.2.3
+
       - name: Verify server workspace
         run: |
           echo "检查 server 工作区..."
@@ -291,8 +297,8 @@ jobs:
             yarn install --immutable
           fi
 
-      - name: Build server (Workspace)
-        run: yarn workspace server build
+      - name: Build server (Lerna)
+        run: lerna run build --scope=server
 
       - name: Create server build package
         run: |
