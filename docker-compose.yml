@@ -51,9 +51,9 @@ services:
       - mysql
 
   # 前端服务
-  panel:
+  web:
     build:
-      context: ./panel
+      context: ./web
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
