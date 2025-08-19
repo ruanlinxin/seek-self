@@ -41,6 +41,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          corepack: true
+
+      - name: Enable Yarn Modern
+        run: |
+          corepack enable
+          yarn set version stable
+          yarn --version
+
       - name: Get build time
         id: time
         run: echo "build_time=$(date '+%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
@@ -73,16 +85,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'yarn'
+          node-version: '20'
+          corepack: true
 
-      - name: Install dependencies
-        run: yarn install
-
-      - name: Build web
+      - name: Enable Yarn Modern
         run: |
-          cd panel
-          yarn build
+          corepack enable
+          yarn set version stable
+
+      - name: Install dependencies (Workspace)
+        run: |
+          yarn install --immutable
+          yarn workspaces list
+
+      - name: Build web (Workspace)
+        run: yarn workspace panel build
 
       - name: Create web build package
         run: |
@@ -141,8 +158,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'yarn'
+          node-version: '20'
+          corepack: true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -157,15 +174,21 @@ jobs:
           build-tools: 33.0.0
           ndk-version: 25.1.8937393
 
-      - name: Install dependencies
-        run: yarn install
-
-      - name: Prebuild Android (if needed)
+      - name: Enable Yarn Modern
         run: |
-          cd mobile
-          if [ ! -d "android" ]; then
+          corepack enable
+          yarn set version stable
+
+      - name: Install dependencies (Workspace)
+        run: |
+          yarn install --immutable
+          yarn workspaces list
+
+      - name: Prebuild Android (Workspace)
+        run: |
+          if [ ! -d "mobile/android" ]; then
             echo "执行预构建..."
-            npx expo prebuild --platform android --clean
+            yarn workspace mobile expo prebuild --platform android --clean
           else
             echo "Android 项目已存在，跳过预构建"
           fi
