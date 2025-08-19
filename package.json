@@ -1,8 +1,27 @@
 {
   "name": "seek-self",
-  "license": "MIT",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "web",
+    "mobile",
+    "desktop-server",
+    "server"
+  ],
   "scripts": {
-    "start:panel": "cd ./panel && yarn dev",
-    "start:server": "cd ./server && yarn start:dev"
+    "dev:web": "lerna run dev --scope=web",
+    "dev:server": "lerna run dev --scope=server",
+    "dev:mobile": "lerna run dev --scope=mobile",
+    "dev:desktop-server": "lerna run dev --scope=desktop-server",
+    "build:web": "lerna run build --scope=web",
+    "build:mobile": "lerna run build --scope=mobile",
+    "build:all": "lerna run build",
+    "test:all": "lerna run test",
+    "clean": "lerna clean",
+    "bootstrap": "lerna bootstrap"
+  },
+  "devDependencies": {
+    "lerna": "^8.2.3"
   }
 }

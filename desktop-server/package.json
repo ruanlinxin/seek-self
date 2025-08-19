@@ -1,0 +1,19 @@
+{
+  "name": "desktop-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Desktop server development not configured yet'",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@seek-self/types": "workspace:*",
+    "@seek-self/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,6 +1,6 @@
 {
-  "name": "seek-self",
-  "version": "0.0.1",
+  "name": "web",
+  "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
