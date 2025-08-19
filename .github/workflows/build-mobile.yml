@@ -1,0 +1,219 @@
+name: Build Mobile
+
+# 只能手动触发，支持所有分支
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+# 权限设置
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  # 准备构建环境
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      build_time: ${{ steps.time.outputs.build_time }}
+      branch_name: ${{ steps.branch.outputs.branch_name }}
+      commit_sha: ${{ steps.commit.outputs.commit_sha }}
+      version_mobile: ${{ steps.version.outputs.version_mobile }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          corepack: true
+
+      - name: Enable Yarn Modern
+        run: |
+          corepack enable
+          yarn set version stable
+          yarn --version
+
+      - name: Get build time
+        id: time
+        run: echo "build_time=$(date '+%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Get branch name
+        id: branch
+        run: echo "branch_name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+      - name: Get commit SHA
+        id: commit
+        run: echo "commit_sha=${GITHUB_SHA:0:8}" >> $GITHUB_OUTPUT
+
+      - name: Generate mobile version
+        id: version
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          BUILD_TIME=$(date '+%Y%m%d-%H%M%S')
+          echo "version_mobile=${BRANCH_NAME}-${BUILD_TIME}-mobile" >> $GITHUB_OUTPUT
+
+  # 移动端构建
+  build-mobile:
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          corepack: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 33
+          build-tools: 33.0.0
+          ndk-version: 25.1.8937393
+
+      - name: Enable Yarn Modern
+        run: |
+          corepack enable
+          yarn set version stable
+
+      - name: Install dependencies (Workspace)
+        run: |
+          yarn install --immutable
+          yarn workspaces list
+
+      - name: Install Lerna globally
+        run: npm install -g lerna@^8.2.3
+
+      - name: Prebuild Android (Always)
+        run: |
+          echo "执行预构建 (流水线中总是执行)..."
+          yarn workspace mobile expo prebuild --platform android --clean --clear-cache
+
+      - name: Configure Android Build
+        run: |
+          cd mobile/android
+          
+          # 创建 local.properties
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          
+          # 创建/更新 gradle.properties 优化构建性能
+          cat >> gradle.properties << EOF
+          # Gradle JVM 内存配置
+          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+UseG1GC
+          
+          # 并行构建
+          org.gradle.parallel=true
+          org.gradle.configureondemand=true
+          
+          # 构建缓存
+          org.gradle.caching=true
+          
+          # 禁用 Gradle Daemon 性能警告
+          org.gradle.daemon.performance.disable-logging=true
+          
+          # Android 构建优化
+          android.useAndroidX=true
+          android.enableJetifier=true
+          android.enableR8.fullMode=true
+          android.enableBuildCache=true
+          EOF
+
+      - name: Build Android APK
+        run: |
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew clean
+          if [ "${{ github.event.inputs.build_type }}" == "release" ]; then
+            ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
+
+      - name: Create mobile build package
+        run: |
+          mkdir -p dist/mobile
+          
+          # 复制 APK 文件
+          if [ "${{ github.event.inputs.build_type }}" == "release" ]; then
+            cp mobile/android/app/build/outputs/apk/release/app-release.apk dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk
+          else
+            cp mobile/android/app/build/outputs/apk/debug/app-debug.apk dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk
+          fi
+          
+          # 获取 APK 信息
+          APK_SIZE=$(du -h dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk | cut -f1)
+          
+          # 创建构建信息
+          cat > dist/mobile/build-info.txt << EOF
+          移动端构建信息
+          ===============
+          版本号: ${{ needs.prepare.outputs.version_mobile }}
+          构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
+          分支: ${{ needs.prepare.outputs.branch_name }}
+          提交: ${{ needs.prepare.outputs.commit_sha }}
+          构建类型: ${{ github.event.inputs.build_type }}
+          触发者: ${{ github.actor }}
+          
+          构建产物:
+          - APK 文件: ${{ needs.prepare.outputs.version_mobile }}.apk
+          - 文件大小: ${APK_SIZE}
+          
+          安装说明:
+          1. 下载 APK 文件到 Android 设备
+          2. 开启"未知来源"应用安装权限
+          3. 点击 APK 文件进行安装
+          
+          构建状态: 成功
+          EOF
+
+      - name: Upload mobile artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-${{ needs.prepare.outputs.version_mobile }}
+          path: dist/mobile/
+          retention-days: 30
+
+  # 构建总结
+  build-summary:
+    runs-on: ubuntu-latest
+    needs: [prepare, build-mobile]
+    if: always()
+    steps:
+      - name: Mobile Build Summary
+        run: |
+          echo "## 📱 移动端构建总结" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 构建信息" >> $GITHUB_STEP_SUMMARY
+          echo "| 项目 | 值 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 构建时间 | $(date '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "| 分支 | ${{ needs.prepare.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 提交 | ${{ needs.prepare.outputs.commit_sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 构建类型 | ${{ github.event.inputs.build_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 触发者 | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 版本信息" >> $GITHUB_STEP_SUMMARY
+          echo "| 端 | 版本号 | 状态 |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Mobile | ${{ needs.prepare.outputs.version_mobile }} | ${{ needs.build-mobile.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 下载链接" >> $GITHUB_STEP_SUMMARY
+          echo "构建完成后，可在 Actions 页面的 Artifacts 部分下载 APK 文件。" >> $GITHUB_STEP_SUMMARY

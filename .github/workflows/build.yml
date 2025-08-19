@@ -12,7 +12,6 @@ on:
         options:
           - all
           - web
-          - mobile
           - server
       build_type:
         description: '构建类型'
@@ -37,7 +36,6 @@ jobs:
       branch_name: ${{ steps.branch.outputs.branch_name }}
       commit_sha: ${{ steps.commit.outputs.commit_sha }}
       version_web: ${{ steps.version.outputs.version_web }}
-      version_mobile: ${{ steps.version.outputs.version_mobile }}
       version_server: ${{ steps.version.outputs.version_server }}
     steps:
       - name: Checkout
@@ -73,7 +71,6 @@ jobs:
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
           BUILD_TIME=$(date '+%Y%m%d-%H%M%S')
           echo "version_web=${BRANCH_NAME}-${BUILD_TIME}-web" >> $GITHUB_OUTPUT
-          echo "version_mobile=${BRANCH_NAME}-${BUILD_TIME}-mobile" >> $GITHUB_OUTPUT
           echo "version_server=${BRANCH_NAME}-${BUILD_TIME}-server" >> $GITHUB_OUTPUT
 
   # Web端构建
@@ -107,20 +104,10 @@ jobs:
       - name: Build web (Lerna)
         run: lerna run build --scope=web
 
-      - name: Create web build package
+      - name: Create web build info
         run: |
-          cd ${{ github.workspace }}
-          mkdir -p dist/web
-          
-          # 复制构建产物
-          cp -r web/dist dist/web/
-          cp web/Dockerfile dist/web/
-          cp web/nginx.conf dist/web/
-          cp docker-compose.yml dist/
-          cp -r nginx dist/
-          
-          # 创建构建信息
-          cat > dist/web/build-info.txt << EOF
+          mkdir -p web/dist
+          cat > web/dist/build-info.txt << EOF
           Web端构建信息
           =============
           版本号: ${{ needs.prepare.outputs.version_web }}
@@ -132,132 +119,20 @@ jobs:
           
           构建产物:
           - Web 静态文件: dist/
-          - Docker 配置: Dockerfile, nginx.conf
-          - 服务配置: docker-compose.yml, nginx/
+          - Docker 配置: Dockerfile
           
           构建状态: 成功
           EOF
-
-      - name: Create web archive
-        run: |
-          cd dist
-          tar -czf web-${{ needs.prepare.outputs.version_web }}.tar.gz web/ docker-compose.yml nginx/
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
-          name: web-${{ needs.prepare.outputs.version_web }}
+          name: web-build
           path: |
-            dist/web-${{ needs.prepare.outputs.version_web }}.tar.gz
-            dist/web/build-info.txt
+            web/dist/
+            web/Dockerfile
           retention-days: 30
 
-  # 移动端构建
-  build-mobile:
-    runs-on: ubuntu-latest
-    needs: prepare
-    if: ${{ github.event.inputs.build_target == 'all' || github.event.inputs.build_target == 'mobile' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          corepack: true
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 33
-          build-tools: 33.0.0
-          ndk-version: 25.1.8937393
-
-      - name: Enable Yarn Modern
-        run: |
-          corepack enable
-          yarn set version stable
-
-      - name: Install dependencies (Workspace)
-        run: |
-          yarn install --immutable
-          yarn workspaces list
-
-      - name: Prebuild Android (Workspace)
-        run: |
-          if [ ! -d "mobile/android" ]; then
-            echo "执行预构建..."
-            yarn workspace mobile expo prebuild --platform android --clean
-          else
-            echo "Android 项目已存在，跳过预构建"
-          fi
-
-      - name: Create local.properties
-        run: |
-          cd mobile/android
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-
-      - name: Build Android APK
-        run: |
-          cd mobile/android
-          chmod +x gradlew
-          ./gradlew clean
-          if [ "${{ github.event.inputs.build_type }}" == "release" ]; then
-            ./gradlew assembleRelease
-          else
-            ./gradlew assembleDebug
-          fi
-
-      - name: Create mobile build package
-        run: |
-          mkdir -p dist/mobile
-          
-          # 复制 APK 文件
-          if [ "${{ github.event.inputs.build_type }}" == "release" ]; then
-            cp mobile/android/app/build/outputs/apk/release/app-release.apk dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk
-          else
-            cp mobile/android/app/build/outputs/apk/debug/app-debug.apk dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk
-          fi
-          
-          # 获取 APK 信息
-          APK_SIZE=$(du -h dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk | cut -f1)
-          
-          # 创建构建信息
-          cat > dist/mobile/build-info.txt << EOF
-          移动端构建信息
-          ===============
-          版本号: ${{ needs.prepare.outputs.version_mobile }}
-          构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
-          分支: ${{ needs.prepare.outputs.branch_name }}
-          提交: ${{ needs.prepare.outputs.commit_sha }}
-          构建类型: ${{ github.event.inputs.build_type }}
-          触发者: ${{ github.actor }}
-          
-          构建产物:
-          - APK 文件: ${{ needs.prepare.outputs.version_mobile }}.apk
-          - 文件大小: ${APK_SIZE}
-          
-          安装说明:
-          1. 下载 APK 文件到 Android 设备
-          2. 开启"未知来源"应用安装权限
-          3. 点击 APK 文件进行安装
-          
-          构建状态: 成功
-          EOF
-
-      - name: Upload mobile artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mobile-${{ needs.prepare.outputs.version_mobile }}
-          path: dist/mobile/
-          retention-days: 30
 
   # 服务端构建
   build-server:
@@ -290,25 +165,10 @@ jobs:
       - name: Build server (Lerna)
         run: lerna run build --scope=server
 
-      - name: Create server build package
+      - name: Create server build info
         run: |
-          cd ${{ github.workspace }}
-          mkdir -p dist/server
-          
-          # 复制构建产物
-          cp -r server/dist dist/server/
-          cp server/package.json dist/server/
-          if [ -f "server/Dockerfile" ]; then
-            cp server/Dockerfile dist/server/
-          fi
-          if [ -f "server/.env.example" ]; then
-            cp server/.env.example dist/server/
-          fi
-          cp docker-compose.yml dist/
-          cp -r nginx dist/
-          
-          # 创建构建信息
-          cat > dist/server/build-info.txt << EOF
+          mkdir -p server/dist
+          cat > server/dist/build-info.txt << EOF
           服务端构建信息
           ===============
           版本号: ${{ needs.prepare.outputs.version_server }}
@@ -321,37 +181,143 @@ jobs:
           构建产物:
           - 服务端代码: dist/
           - 生产依赖: package.json
-          - Docker 配置: Dockerfile (如果存在)
-          - 环境配置: .env.example (如果存在)
-          - 服务配置: docker-compose.yml, nginx/
+          - Docker 配置: Dockerfile
           
           部署说明:
-          1. 安装生产依赖: npm install --production
-          2. 设置环境变量: 复制 .env.example 为 .env 并配置
-          3. 启动服务: npm start 或 docker-compose up -d
-          4. 验证服务: curl http://localhost:3000/health
+          1. 使用 docker-compose up -d 启动服务
+          2. 验证服务: curl http://localhost:10000/health
           
           构建状态: 成功
           EOF
 
-      - name: Create server archive
-        run: |
-          cd dist
-          tar -czf server-${{ needs.prepare.outputs.version_server }}.tar.gz server/ docker-compose.yml nginx/
-
       - name: Upload server artifact
         uses: actions/upload-artifact@v4
         with:
-          name: server-${{ needs.prepare.outputs.version_server }}
+          name: server-build
           path: |
-            dist/server-${{ needs.prepare.outputs.version_server }}.tar.gz
-            dist/server/build-info.txt
+            server/dist/
+            server/package.json
+            server/Dockerfile
+          retention-days: 30
+
+  # 创建部署包
+  create-deployment-package:
+    runs-on: ubuntu-latest
+    needs: [prepare, build-web, build-server]
+    if: ${{ github.event.inputs.build_target == 'all' && needs.build-web.result == 'success' && needs.build-server.result == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: web/
+
+      - name: Download server artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: server-build
+          path: server/
+
+      - name: Create deployment package structure
+        run: |
+          # 创建部署包目录结构
+          mkdir -p deployment-package
+          
+          # 复制 docker-compose.yml 到根目录
+          cp docker-compose.yml deployment-package/
+          
+          # 创建 web 目录结构
+          mkdir -p deployment-package/web
+          cp -r web/dist deployment-package/web/
+          cp web/Dockerfile deployment-package/web/
+          
+          # 创建 server 目录结构
+          mkdir -p deployment-package/server
+          cp -r server/dist deployment-package/server/
+          cp server/package.json deployment-package/server/
+          cp server/Dockerfile deployment-package/server/
+          
+          # 复制 nginx 配置
+          cp -r nginx deployment-package/
+          
+          # 复制 mysql 初始化脚本
+          if [ -d "mysql" ]; then
+            cp -r mysql deployment-package/
+          fi
+          
+          # 创建部署说明文件
+          cat > deployment-package/README.md << EOF
+          # Seek-Self 部署包
+          
+          ## 构建信息
+          - 版本: ${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}
+          - 构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
+          - 分支: ${{ needs.prepare.outputs.branch_name }}
+          - 提交: ${{ needs.prepare.outputs.commit_sha }}
+          - 构建类型: ${{ github.event.inputs.build_type }}
+          
+          ## 目录结构
+          \`\`\`
+          deployment-package/
+          ├── docker-compose.yml          # Docker Compose 配置文件
+          ├── web/                        # Web 前端
+          │   ├── build-info.txt         # 构建信息
+          │   ├── dist/                  # 构建产物
+          │   └── Dockerfile             # Docker 配置
+          ├── server/                     # 后端服务
+          │   ├── build-info.txt         # 构建信息
+          │   ├── dist/                  # 构建产物
+          │   ├── package.json           # 依赖配置
+          │   └── Dockerfile             # Docker 配置
+          ├── nginx/                      # Nginx 配置
+          │   ├── nginx.conf
+          │   └── conf.d/
+          └── mysql/                      # MySQL 初始化脚本
+              └── init/
+          \`\`\`
+          
+          ## 快速部署
+          1. 解压部署包到服务器
+          2. 进入部署包目录: \`cd deployment-package\`
+          3. 启动服务: \`docker-compose up -d\`
+          4. 访问应用: http://localhost:10000
+          
+          ## 服务端口
+          - Web 服务: http://localhost:10000
+          - MySQL: localhost:3306
+          - PeerJS: localhost:3478
+          
+          ## 停止服务
+          \`\`\`bash
+          docker-compose down
+          \`\`\`
+          
+          ## 查看日志
+          \`\`\`bash
+          docker-compose logs -f
+          \`\`\`
+          EOF
+
+      - name: Create deployment archive
+        run: |
+          tar -czf seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}.tar.gz deployment-package/
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}
+          path: |
+            seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}.tar.gz
+            deployment-package/README.md
           retention-days: 30
 
   # 构建总结
   build-summary:
     runs-on: ubuntu-latest
-    needs: [prepare, build-web, build-mobile, build-server]
+    needs: [prepare, build-web, build-server, create-deployment-package]
     if: always()
     steps:
       - name: Build Summary
@@ -368,12 +334,25 @@ jobs:
           echo "| 构建类型 | ${{ github.event.inputs.build_type }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 触发者 | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 版本信息" >> $GITHUB_STEP_SUMMARY
-          echo "| 端 | 版本号 | 状态 |" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 构建状态" >> $GITHUB_STEP_SUMMARY
+          echo "| 组件 | 版本号 | 状态 |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|------|" >> $GITHUB_STEP_SUMMARY
           echo "| Web | ${{ needs.prepare.outputs.version_web }} | ${{ needs.build-web.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Mobile | ${{ needs.prepare.outputs.version_mobile }} | ${{ needs.build-mobile.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Server | ${{ needs.prepare.outputs.version_server }} | ${{ needs.build-server.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 部署包 | ${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }} | ${{ needs.create-deployment-package.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 下载链接" >> $GITHUB_STEP_SUMMARY
-          echo "构建完成后，可在 Actions 页面的 Artifacts 部分下载对应的构建产物。" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 产物下载" >> $GITHUB_STEP_SUMMARY
+          echo "构建完成后，可在 Actions 页面的 Artifacts 部分下载以下产物：" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.create-deployment-package.result }}" == "success" ]; then
+            echo "🎯 **推荐下载**: \`seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}\` - 完整部署包" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**部署步骤**:" >> $GITHUB_STEP_SUMMARY
+            echo "1. 下载并解压部署包" >> $GITHUB_STEP_SUMMARY
+            echo "2. \`cd deployment-package\`" >> $GITHUB_STEP_SUMMARY
+            echo "3. \`docker-compose up -d\`" >> $GITHUB_STEP_SUMMARY
+            echo "4. 访问 http://localhost:10000" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- \`web-build\` - Web 前端构建产物" >> $GITHUB_STEP_SUMMARY
+            echo "- \`server-build\` - 服务端构建产物" >> $GITHUB_STEP_SUMMARY
+          fi

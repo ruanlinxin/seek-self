@@ -99,7 +99,7 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d
     depends_on:
       - server
-      - panel
+      - web
       - peerjs-server
     restart: unless-stopped
     networks:
