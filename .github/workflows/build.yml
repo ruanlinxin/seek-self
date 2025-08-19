@@ -281,6 +281,16 @@ jobs:
           yarn install --immutable
           yarn workspaces list
 
+      - name: Verify server workspace
+        run: |
+          echo "检查 server 工作区..."
+          if yarn workspace server run --version; then
+            echo "✅ server 工作区存在"
+          else
+            echo "❌ server 工作区不存在，尝试修复..."
+            yarn install --immutable
+          fi
+
       - name: Build server (Workspace)
         run: yarn workspace server build
 
