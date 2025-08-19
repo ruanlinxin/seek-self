@@ -301,17 +301,11 @@ jobs:
           \`\`\`
           EOF
 
-      - name: Create deployment archive
-        run: |
-          tar -czf seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}.tar.gz deployment-package/
-
       - name: Upload deployment package
         uses: actions/upload-artifact@v4
         with:
           name: seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}
-          path: |
-            seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}.tar.gz
-            deployment-package/README.md
+          path: deployment-package/
           retention-days: 30
 
   # 构建总结
@@ -348,10 +342,19 @@ jobs:
             echo "🎯 **推荐下载**: \`seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}\` - 完整部署包" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**部署步骤**:" >> $GITHUB_STEP_SUMMARY
-            echo "1. 下载并解压部署包" >> $GITHUB_STEP_SUMMARY
-            echo "2. \`cd deployment-package\`" >> $GITHUB_STEP_SUMMARY
-            echo "3. \`docker-compose up -d\`" >> $GITHUB_STEP_SUMMARY
-            echo "4. 访问 http://localhost:10000" >> $GITHUB_STEP_SUMMARY
+            echo "1. 下载部署包到服务器" >> $GITHUB_STEP_SUMMARY
+            echo "2. \`docker-compose up -d\`" >> $GITHUB_STEP_SUMMARY
+            echo "3. 访问 http://localhost:10000" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**目录结构**:" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "deployment-package/" >> $GITHUB_STEP_SUMMARY
+            echo "├── docker-compose.yml" >> $GITHUB_STEP_SUMMARY
+            echo "├── web/dist/ + Dockerfile" >> $GITHUB_STEP_SUMMARY
+            echo "├── server/dist/ + package.json + Dockerfile" >> $GITHUB_STEP_SUMMARY
+            echo "├── nginx/" >> $GITHUB_STEP_SUMMARY
+            echo "└── mysql/" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           else
             echo "- \`web-build\` - Web 前端构建产物" >> $GITHUB_STEP_SUMMARY
             echo "- \`server-build\` - 服务端构建产物" >> $GITHUB_STEP_SUMMARY
