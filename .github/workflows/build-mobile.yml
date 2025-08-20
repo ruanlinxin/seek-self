@@ -96,7 +96,7 @@ jobs:
 
       - name: Install dependencies (Workspace)
         run: |
-          yarn install --immutable
+          yarn install
           yarn workspaces list
 
       - name: Install Lerna globally
