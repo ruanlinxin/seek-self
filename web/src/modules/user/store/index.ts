@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia';
+import {token} from '@seek-self/utils'
 import {store} from '@/store';
-import {db} from '@/tools'
 import {getUserInfo} from "@/modules/user/api";
 
 export const defaultProfile = () => ({
@@ -12,16 +12,16 @@ export const defaultProfile = () => ({
     bio: ''
 })
 export const useUserStore = defineStore('user', () => {
-    const token = ref()
+    const curToken = ref()
     const profile = ref(defaultProfile())
     watchEffect(() => {
-        const t = token.value
+        const t = curToken.value
         if (t) {
             getUserInfo().then(res => {
                 profile.value = res.data.profile as typeof profile.value
             }).catch(() => {
-                db.token.clearToken()
-                token.value = null
+                token.remove()
+                curToken.value = null
                 profile.value = defaultProfile()
             })
         } else {
@@ -35,20 +35,20 @@ export const useUserStore = defineStore('user', () => {
         sex: 1,
     })
     const setToken = (t: string) => {
-        db.token.setToken(t)
-        token.value = t
+        token.set(t)
+        curToken.value = t
     }
     const logout = () => {
-        db.token.clearToken()
-        token.value = null
+        token.remove()
+        curToken.value = null
         profile.value = defaultProfile()
     }
-    const startToken = db.token.getToken()
+    const startToken = token.get()
     if (startToken) {
-        token.value = startToken
+        curToken.value = startToken
     }
     return {
-        token,
+        token: curToken,
         info,
         profile,
         setToken,

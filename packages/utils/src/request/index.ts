@@ -20,7 +20,7 @@ export const createRequest = (option: CreateAxiosDefaults, events?: RequestEvent
     _axios.interceptors.request.use(config => {
         const _token = token.get()
         if (_token) {
-            config.headers.Authorization = `Bearer ${token}`
+            config.headers.Authorization = `Bearer ${_token}`
         }
         return config
     })
