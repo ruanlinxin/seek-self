@@ -144,16 +144,86 @@ jobs:
             ARTIFACT_URL=$(cat artifact_url.txt)
             echo "Downloading artifact from: $ARTIFACT_URL"
             
+            # 创建临时目录
+            mkdir -p temp_extract
+            cd temp_extract
+            
             # 下载 artifact
             gh api "$ARTIFACT_URL" > seek-self-artifact.zip
             
-            # 解压 artifact
-            unzip seek-self-artifact.zip
+            # 静默解压 artifact，覆盖重复文件
+            unzip -q -o seek-self-artifact.zip
             
-            # 重新打包为发布包
-            cd deployment-package
-            zip -r ../seek-self.zip .
-            cd ..
+            # 检查解压结果
+            echo "📁 解压后的目录结构:"
+            find . -type f | head -20
+            
+            # 检查是否有 deployment-package 目录
+            if [ -d "deployment-package" ]; then
+              echo "✅ 找到 deployment-package 目录"
+              cd deployment-package
+              zip -r ../../seek-self.zip .
+              cd ../..
+            else
+              echo "📦 直接使用解压后的文件结构创建部署包..."
+              
+              # 检查必要的文件是否存在
+              if [ -d "server" ] && [ -d "web" ]; then
+                echo "✅ 发现 server 和 web 目录，创建部署包"
+                
+                # 需要添加缺失的配置文件
+                cd ..
+                
+                # 复制必要的配置文件到解压目录
+                if [ -f "docker-compose.yml" ]; then
+                  cp docker-compose.yml temp_extract/
+                fi
+                if [ -d "nginx" ]; then
+                  cp -r nginx temp_extract/
+                fi
+                if [ -d "mysql" ]; then
+                  cp -r mysql temp_extract/
+                fi
+                
+                # 创建 README.md
+                cat > temp_extract/README.md << 'EOF'
+# Seek-Self 部署包
+
+## 快速部署
+1. 解压部署包
+2. 运行 `docker-compose up -d`
+3. 访问 http://localhost:10000
+
+## 服务端口
+- Web 服务: http://localhost:10000
+- MySQL: localhost:3306
+- PeerJS: localhost:3478
+
+## 管理命令
+```bash
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+```
+EOF
+                
+                cd temp_extract
+                zip -r ../seek-self.zip .
+                cd ..
+              else
+                echo "❌ 未找到预期的目录结构"
+                ls -la temp_extract/
+                exit 1
+              fi
+            fi
+            
+            # 清理临时目录
+            rm -rf temp_extract
             
             echo "✅ 部署包创建完成: seek-self.zip"
             ls -la seek-self.zip
