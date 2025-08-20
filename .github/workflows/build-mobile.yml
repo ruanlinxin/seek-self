@@ -94,6 +94,17 @@ jobs:
           corepack enable
           yarn set version stable
 
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            mobile/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Install dependencies (Workspace)
         run: |
           yarn install
@@ -102,10 +113,15 @@ jobs:
       - name: Install Lerna globally
         run: npm install -g lerna@^8.2.3
 
+      - name: Clear Expo cache
+        run: |
+          echo "清理 Expo 缓存..."
+          yarn workspace mobile expo start --clear || true
+
       - name: Prebuild Android (Always)
         run: |
           echo "执行预构建 (流水线中总是执行)..."
-          yarn workspace mobile expo prebuild --platform android --clean --clear-cache
+          yarn workspace mobile expo prebuild --platform android --clean
 
       - name: Configure Android Build
         run: |
@@ -136,27 +152,61 @@ jobs:
           android.enableBuildCache=true
           EOF
 
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            mobile/android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('mobile/android/**/*.gradle*', 'mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - name: Build Android APK
         run: |
           cd mobile/android
           chmod +x gradlew
+          
+          echo "开始构建 Android APK..."
+          echo "构建类型: ${{ github.event.inputs.build_type }}"
+          
+          # 清理之前的构建
           ./gradlew clean
+          
+          # 根据构建类型执行相应的构建命令
           if [ "${{ github.event.inputs.build_type }}" == "release" ]; then
-            ./gradlew assembleRelease
+            echo "构建 Release 版本..."
+            ./gradlew assembleRelease --no-daemon --stacktrace
           else
-            ./gradlew assembleDebug
+            echo "构建 Debug 版本..."
+            ./gradlew assembleDebug --no-daemon --stacktrace
           fi
+          
+          echo "构建完成！"
 
       - name: Create mobile build package
         run: |
           mkdir -p dist/mobile
           
-          # 复制 APK 文件
+          # 复制 APK 文件并检查是否存在
           if [ "${{ github.event.inputs.build_type }}" == "release" ]; then
-            cp mobile/android/app/build/outputs/apk/release/app-release.apk dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk
+            APK_SOURCE="mobile/android/app/build/outputs/apk/release/app-release.apk"
           else
-            cp mobile/android/app/build/outputs/apk/debug/app-debug.apk dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk
+            APK_SOURCE="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
           fi
+          
+          if [ ! -f "$APK_SOURCE" ]; then
+            echo "错误: APK 文件不存在: $APK_SOURCE"
+            echo "列出所有 APK 文件:"
+            find mobile/android/app/build/outputs/apk/ -name "*.apk" -type f || true
+            exit 1
+          fi
+          
+          echo "复制 APK 文件: $APK_SOURCE"
+          cp "$APK_SOURCE" "dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk"
+          
+          echo "APK 文件复制成功！"
           
           # 获取 APK 信息
           APK_SIZE=$(du -h dist/mobile/${{ needs.prepare.outputs.version_mobile }}.apk | cut -f1)
