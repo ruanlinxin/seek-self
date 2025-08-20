@@ -68,7 +68,7 @@
         <h3>重新上传</h3>
         <p>上传新的题库文件</p>
       </div>
-      
+
       <div class="menu-card" @click="openSettings">
         <div class="menu-icon">⚙️</div>
         <h3>通用选项设置</h3>
@@ -198,18 +198,18 @@
           <h3>通用选项设置</h3>
           <button @click="showSettings = false" class="close-btn">×</button>
         </div>
-        
+
         <div class="settings-content">
           <div class="setting-item">
             <label>通用选项列表（用逗号分隔）：</label>
-            <textarea 
-              v-model="settingsText" 
+            <textarea
+              v-model="settingsText"
               class="settings-textarea"
               placeholder="例如：m,m²,m³,t,个"
               rows="3"
             ></textarea>
           </div>
-          
+
           <div class="current-options">
             <h4>当前选项：</h4>
             <div class="option-tags">
@@ -219,7 +219,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="modal-actions">
           <button @click="saveSettings" class="save-btn">保存设置</button>
           <button @click="resetSettings" class="reset-btn">恢复默认</button>
@@ -312,12 +312,12 @@ const customParseQuestions = (lines) => {
   const parsedQuestions = lines.map((line, i) => {
     const parts = line.split('\t')
     const question = parts[0]
-    const answer = parts[1]
+    const answer = parts[1].replace('\r','')
     const customOptions = parts.slice(2).filter(opt => opt && opt.trim())
-    
+
     // 如果有自定义选项使用自定义选项，否则使用通用选项
     const options = customOptions.length ? customOptions : [...commAnswerOptions.value]
-    
+
     // 找到正确答案的索引
     let correctIndex = 0
     if (customOptions.length) {
@@ -329,7 +329,8 @@ const customParseQuestions = (lines) => {
       correctIndex = commAnswerOptions.value.findIndex(opt => opt === answer)
       if (correctIndex === -1) correctIndex = 0 // 如果找不到，默认第一个
     }
-    
+
+    console.log({question,answer})
     return {
       id: i + 1,
       question: question,
@@ -339,7 +340,7 @@ const customParseQuestions = (lines) => {
       hasCustomOptions: customOptions.length > 0
     }
   })
-  
+
   // 设置题目数据
   setQuestions(parsedQuestions)
 }
@@ -523,12 +524,12 @@ const saveSettings = () => {
     .split(',')
     .map(opt => opt.trim())
     .filter(opt => opt)
-  
+
   if (newOptions.length === 0) {
     alert('请至少输入一个选项')
     return
   }
-  
+
   commAnswerOptions.value = newOptions
   saveLocalData()
   showSettings.value = false
