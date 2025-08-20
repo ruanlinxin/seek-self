@@ -21,34 +21,79 @@ mkdir -p "$ARCHIVE_DIR" "$EXTRACT_DIR"
 echo "获取最新版本信息..."
 RESPONSE=$(curl -sSL ${AUTH_HEADER:+-H "$AUTH_HEADER"} "$API")
 
-# 提取 tag 与 tar.gz 资源链接（优先使用 jq）
+# 提取 tag 与资源链接（优先使用 jq，支持 zip 和 tar.gz）
 if command -v jq >/dev/null 2>&1; then
   TAG=$(echo "$RESPONSE" | jq -r '.tag_name // empty')
-  TAR_URL=$(echo "$RESPONSE" | jq -r '.assets[] | select(.name | endswith(".tar.gz")) | .browser_download_url' | head -n1)
+  # 优先查找 seek-self.zip，如果没有再找 tar.gz
+  DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.assets[] | select(.name == "seek-self.zip") | .browser_download_url' | head -n1)
+  if [[ -z "$DOWNLOAD_URL" ]]; then
+    DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.assets[] | select(.name | endswith(".tar.gz")) | .browser_download_url' | head -n1)
+  fi
 else
   TAG=$(echo "$RESPONSE" | grep -oE '"tag_name"\s*:\s*"[^"]+' | sed 's/.*:"//')
-  TAR_URL=$(echo "$RESPONSE" | grep -oE 'https://[^"]+\.tar\.gz' | head -n1)
+  # 优先查找 seek-self.zip
+  DOWNLOAD_URL=$(echo "$RESPONSE" | grep -oE 'https://[^"]+/seek-self\.zip' | head -n1)
+  if [[ -z "$DOWNLOAD_URL" ]]; then
+    DOWNLOAD_URL=$(echo "$RESPONSE" | grep -oE 'https://[^"]+\.tar\.gz' | head -n1)
+  fi
 fi
 
-if [[ -z "${TAG:-}" || -z "${TAR_URL:-}" ]]; then
-  echo "未找到最新版本的 tar.gz 资产，或 API 响应异常。" >&2
+if [[ -z "${TAG:-}" || -z "${DOWNLOAD_URL:-}" ]]; then
+  echo "未找到最新版本的部署包（zip 或 tar.gz），或 API 响应异常。" >&2
   exit 1
 fi
 
 echo "最新版本: ${TAG}"
-echo "下载地址: ${TAR_URL}"
+echo "下载地址: ${DOWNLOAD_URL}"
 
-ARCHIVE_PATH="${ARCHIVE_DIR}/seek-self-panel-${TAG}.tar.gz"
-echo "下载到: ${ARCHIVE_PATH}"
-curl -fL --retry 3 -o "$ARCHIVE_PATH" "$TAR_URL"
-
-# 清空解压目标目录（保持目录存在）
-rm -rf "${EXTRACT_DIR:?}"/*
-
-# 直接把归档的第一层目录去掉解压到 EXTRACT_DIR
-#（release-* 为顶层目录，--strip-components=1 可去掉该层）
-echo "解压到: ${EXTRACT_DIR}（去掉顶层目录）"
-tar -xzf "$ARCHIVE_PATH" -C "$EXTRACT_DIR" --strip-components=1
+# 根据文件类型确定文件名和解压方式
+if [[ "$DOWNLOAD_URL" == *".zip" ]]; then
+  ARCHIVE_PATH="${ARCHIVE_DIR}/seek-self-${TAG}.zip"
+  echo "下载到: ${ARCHIVE_PATH}"
+  curl -fL --retry 3 -o "$ARCHIVE_PATH" "$DOWNLOAD_URL"
+  
+  # 清空解压目标目录（保持目录存在）
+  rm -rf "${EXTRACT_DIR:?}"/*
+  
+  echo "解压 ZIP 到: ${EXTRACT_DIR}"
+  # 先解压到临时位置，然后检查结构
+  TEMP_DIR="${EXTRACT_DIR}_temp"
+  mkdir -p "$TEMP_DIR"
+  unzip -q "$ARCHIVE_PATH" -d "$TEMP_DIR"
+  
+  # 检查解压结果
+  echo "临时解压内容："
+  ls -la "$TEMP_DIR"
+  
+  # 如果临时目录中直接是部署文件，则移动到目标目录
+  if [[ -f "$TEMP_DIR/docker-compose.yml" ]]; then
+    echo "发现部署文件在根目录，直接移动"
+    mv "$TEMP_DIR"/* "$EXTRACT_DIR"/
+  else
+    # 查找包含 docker-compose.yml 的子目录
+    DEPLOY_DIR=$(find "$TEMP_DIR" -name "docker-compose.yml" -type f | head -1 | xargs dirname)
+    if [[ -n "$DEPLOY_DIR" ]]; then
+      echo "发现部署目录: $DEPLOY_DIR"
+      mv "$DEPLOY_DIR"/* "$EXTRACT_DIR"/
+    else
+      echo "未找到部署文件，移动所有内容"
+      mv "$TEMP_DIR"/* "$EXTRACT_DIR"/
+    fi
+  fi
+  
+  # 清理临时目录
+  rm -rf "$TEMP_DIR"
+else
+  ARCHIVE_PATH="${ARCHIVE_DIR}/seek-self-${TAG}.tar.gz"
+  echo "下载到: ${ARCHIVE_PATH}"
+  curl -fL --retry 3 -o "$ARCHIVE_PATH" "$DOWNLOAD_URL"
+  
+  # 清空解压目标目录（保持目录存在）
+  rm -rf "${EXTRACT_DIR:?}"/*
+  
+  echo "解压 TAR.GZ 到: ${EXTRACT_DIR}（去掉顶层目录）"
+  tar -xzf "$ARCHIVE_PATH" -C "$EXTRACT_DIR" --strip-components=1
+fi
 
 # 展示解压结果（直接展示 EXTRACT_DIR）
 echo "顶层内容:"
