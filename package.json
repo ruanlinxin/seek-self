@@ -15,6 +15,7 @@
     "dev:mobile": "lerna run dev --scope=mobile",
     "dev:desktop-server": "lerna run dev --scope=desktop-server",
     "build:web": "lerna run build --scope=web",
+    "build:server": "lerna run build --scope=server",
     "build:mobile": "lerna run build --scope=mobile",
     "build:all": "lerna run build",
     "test:all": "lerna run test",

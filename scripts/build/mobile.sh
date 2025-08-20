@@ -86,12 +86,27 @@ check_android_env() {
 
 # 安装依赖 (在根目录执行，支持 monorepo)
 install_dependencies() {
-    log_info "安装项目依赖 (在根目录执行)..."
+    log_info "安装项目依赖 (使用 Yarn Workspaces)..."
     cd "$ROOT_DIR"
+    
+    # 启用最新版 Yarn
+    if command -v corepack &> /dev/null; then
+        log_info "启用 Corepack 和最新版 Yarn..."
+        corepack enable
+        yarn set version stable
+    fi
+    
+    # 显示 Yarn 版本
+    YARN_VERSION=$(yarn --version)
+    log_info "Yarn 版本: $YARN_VERSION"
     
     if [ -f "yarn.lock" ]; then
         log_info "使用 Yarn Workspaces 安装依赖..."
-        yarn install
+        yarn install --immutable
+        
+        # 显示工作区信息
+        log_info "工作区列表:"
+        yarn workspaces list
     elif [ -f "package-lock.json" ]; then
         log_info "使用 NPM 安装依赖..."
         npm install
@@ -125,14 +140,14 @@ prebuild_android() {
     log_info "Android 项目不存在或不完整，开始预构建..."
     log_warning "预构建过程可能需要 10-30 分钟，请耐心等待..."
     
-    # 在根目录执行预构建 (支持 monorepo)
+    # 在根目录执行预构建 (使用 Yarn Workspace)
     cd "$ROOT_DIR"
-    if [ -f "lerna.json" ]; then
-        log_info "使用 Lerna 执行预构建..."
-        npx lerna exec --scope mobile -- npx expo prebuild --platform android --clean
-    elif [ -f ".yarnrc.yml" ]; then
+    if [ -f ".yarnrc.yml" ] || [ -f "yarn.lock" ]; then
         log_info "使用 Yarn Workspace 执行预构建..."
         yarn workspace mobile expo prebuild --platform android --clean
+    elif [ -f "lerna.json" ]; then
+        log_info "使用 Lerna 执行预构建..."
+        npx lerna exec --scope mobile -- npx expo prebuild --platform android --clean
     else
         log_info "直接在移动端目录执行预构建..."
         cd "$MOBILE_DIR"

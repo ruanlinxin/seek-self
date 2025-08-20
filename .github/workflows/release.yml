@@ -1,0 +1,202 @@
+name: Release
+
+# 手动触发发布流水线
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (例如: v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: '是否为预发布版本'
+        required: false
+        default: false
+        type: boolean
+      build_run_id:
+        description: '构建流水线的 Run ID (可选，不填则使用最新的构建)'
+        required: false
+        type: string
+
+# 权限设置
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  # 创建发布
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get latest build run
+        id: get_build
+        run: |
+          if [ -n "${{ github.event.inputs.build_run_id }}" ]; then
+            echo "build_run_id=${{ github.event.inputs.build_run_id }}" >> $GITHUB_OUTPUT
+          else
+            # 获取最新的成功构建
+            LATEST_RUN=$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&per_page=1" \
+              --jq '.workflow_runs[0].id')
+            echo "build_run_id=$LATEST_RUN" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          release_name: Seek-Self ${{ github.event.inputs.version }}
+          body: |
+            ## 🚀 Seek-Self ${{ github.event.inputs.version }}
+            
+            ### 📦 部署包下载
+            
+            下载 `seek-self.zip` 部署包，解压后直接使用 `docker-compose up -d` 即可快速部署。
+            
+            ### 🛠️ 部署步骤
+            
+            1. 下载并解压 `seek-self.zip`
+            2. 进入解压后的目录
+            3. 运行 `docker-compose up -d`
+            4. 访问 http://localhost:10000
+            
+            ### 📋 服务端口
+            
+            - **Web 服务**: http://localhost:10000
+            - **MySQL**: localhost:3306
+            - **PeerJS**: localhost:3478
+            
+            ### 🔧 管理命令
+            
+            ```bash
+            # 查看服务状态
+            docker-compose ps
+            
+            # 查看日志
+            docker-compose logs -f
+            
+            # 停止服务
+            docker-compose down
+            
+            # 数据备份
+            docker exec seek-self-mysql mysqldump -u root -proot123456 seek_self > backup.sql
+            ```
+            
+            ### 📝 更新日志
+            
+            - 基于构建 ID: ${{ steps.get_build.outputs.build_run_id }}
+            - 发布时间: ${{ github.run_number }}
+            
+            ---
+            
+            构建来源: [Actions Run #${{ steps.get_build.outputs.build_run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.get_build.outputs.build_run_id }})
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+
+  # 下载构建产物并上传到 Release
+  upload-assets:
+    runs-on: ubuntu-latest
+    needs: create-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get build run ID
+        id: get_build
+        run: |
+          if [ -n "${{ github.event.inputs.build_run_id }}" ]; then
+            echo "build_run_id=${{ github.event.inputs.build_run_id }}" >> $GITHUB_OUTPUT
+          else
+            # 获取最新的成功构建
+            LATEST_RUN=$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${{ github.repository }}/actions/workflows/build.yml/runs?status=success&per_page=1" \
+              --jq '.workflow_runs[0].id')
+            echo "build_run_id=$LATEST_RUN" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download build artifacts
+        run: |
+          # 下载指定构建的 seek-self 产物
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${{ github.repository }}/actions/runs/${{ steps.get_build.outputs.build_run_id }}/artifacts" \
+            --jq '.artifacts[] | select(.name == "seek-self") | .archive_download_url' > artifact_url.txt
+          
+          if [ -s artifact_url.txt ]; then
+            ARTIFACT_URL=$(cat artifact_url.txt)
+            echo "Downloading artifact from: $ARTIFACT_URL"
+            
+            # 下载 artifact
+            gh api "$ARTIFACT_URL" > seek-self-artifact.zip
+            
+            # 解压 artifact
+            unzip seek-self-artifact.zip
+            
+            # 重新打包为发布包
+            cd deployment-package
+            zip -r ../seek-self.zip .
+            cd ..
+            
+            echo "✅ 部署包创建完成: seek-self.zip"
+            ls -la seek-self.zip
+          else
+            echo "❌ 未找到 seek-self 构建产物"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./seek-self.zip
+          asset_name: seek-self.zip
+          asset_content_type: application/zip
+
+  # 发布总结
+  release-summary:
+    runs-on: ubuntu-latest
+    needs: [create-release, upload-assets]
+    if: always()
+    steps:
+      - name: Release Summary
+        run: |
+          echo "## 🎉 发布完成" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 发布信息" >> $GITHUB_STEP_SUMMARY
+          echo "| 项目 | 值 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 版本号 | ${{ github.event.inputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 发布时间 | $(date '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "| 预发布 | ${{ github.event.inputs.prerelease }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 触发者 | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 下载链接" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [发布页面](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.event.inputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 快速部署" >> $GITHUB_STEP_SUMMARY
+          echo "1. 下载 \`seek-self.zip\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. 解压到服务器" >> $GITHUB_STEP_SUMMARY
+          echo "3. 运行 \`docker-compose up -d\`" >> $GITHUB_STEP_SUMMARY
+          echo "4. 访问 http://localhost:10000" >> $GITHUB_STEP_SUMMARY

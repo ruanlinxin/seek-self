@@ -1,5 +1,3 @@
-version: '1.0'
-
 services:
   # MySQL 数据库服务
   mysql:
@@ -51,9 +49,9 @@ services:
       - mysql
 
   # 前端服务
-  panel:
+  web:
     build:
-      context: ./panel
+      context: ./web
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
@@ -99,7 +97,7 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d
     depends_on:
       - server
-      - panel
+      - web
       - peerjs-server
     restart: unless-stopped
     networks:
