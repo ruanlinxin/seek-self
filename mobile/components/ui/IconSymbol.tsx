@@ -18,6 +18,25 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  // 用户相关图标
+  'person.fill': 'person',
+  'person.crop.circle.fill': 'account-circle',
+  'person': 'person-outline',
+  'person.circle': 'account-circle',
+  'person.badge.plus': 'person-add',
+  // 其他常用图标
+  'gear': 'settings',
+  'pencil': 'edit',
+  'envelope': 'email',
+  'phone': 'phone',
+  'location': 'location-on',
+  'calendar': 'event',
+  'heart': 'favorite',
+  'heart.fill': 'favorite',
+  'clock': 'history',
+  'questionmark.circle': 'help',
+  'info.circle': 'info',
+  'checklist': 'assignment',
 } as IconMapping;
 
 /**

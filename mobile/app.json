@@ -1,16 +1,17 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "求己",
+    "slug": "seek-self",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "seek-self",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.seekSelf.mobile"
+      "bundleIdentifier": "com.seekself.app",
+      "displayName": "求己"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +19,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.seekSelf.mobile"
+      "package": "com.seekself.app"
     },
     "web": {
       "bundler": "metro",
