@@ -182,6 +182,7 @@ jobs:
           构建产物:
           - 服务端代码: dist/
           - 生产依赖: package.json
+          - TypeScript 配置: tsconfig.json
           - Docker 配置: Dockerfile
           
           部署说明:
@@ -199,6 +200,7 @@ jobs:
             server/dist/
             server/package.json
             server/Dockerfile
+            server/tsconfig.json
           retention-days: 30
 
   # 创建部署包
@@ -241,6 +243,7 @@ jobs:
           cp -r server/dist deployment-package/server/
           cp server/package.json deployment-package/server/
           cp server/Dockerfile deployment-package/server/
+          cp server/tsconfig.json deployment-package/server/
           
           # 复制 nginx 配置
           cp -r nginx deployment-package/
@@ -273,6 +276,7 @@ jobs:
           │   ├── build-info.txt         # 构建信息
           │   ├── dist/                  # 构建产物
           │   ├── package.json           # 依赖配置
+          │   ├── tsconfig.json          # TypeScript 配置
           │   └── Dockerfile             # Docker 配置
           ├── nginx/                      # Nginx 配置
           │   ├── nginx.conf
