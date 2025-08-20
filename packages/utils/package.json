@@ -8,7 +8,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@seek-self/types": "1.0.0"
+    "@seek-self/types": "1.0.0",
+    "peerjs": "^1.5.5",
+    "react-native-peerjs": "^1.0.4"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

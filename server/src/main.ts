@@ -6,15 +6,14 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
 import { ConfigService } from '@nestjs/config';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { JwtService } from '@nestjs/jwt';
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const jwtService = app.get(JwtService);
   const port = configService.get('port');
-  
+
   app.useGlobalInterceptors(
-    new TransformInterceptor(), 
+    new TransformInterceptor(),
     new LoggingInterceptor(),
     new UserContextInterceptor(jwtService)
   );

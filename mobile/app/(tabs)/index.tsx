@@ -24,6 +24,8 @@ export default function TaskScreen() {
     gold: 1250,
   });
 
+
+
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: '1',
@@ -182,7 +184,7 @@ export default function TaskScreen() {
                 <View style={[styles.statusBadge, { backgroundColor: task.status === 'completed' ? '#1F2937' : task.status === 'in_progress' ? '#374151' : '#6B7280' }]}>
                   <ThemedText style={styles.statusText}>
                     {task.status === 'available' ? '可接取' : task.status === 'in_progress' ? '进行中' : '已完成'}
-                  </ThemedText>
+        </ThemedText>
                 </View>
               </View>
             </TouchableOpacity>
@@ -208,7 +210,7 @@ export default function TaskScreen() {
                 <View style={[styles.statusBadge, { backgroundColor: task.status === 'completed' ? '#1F2937' : task.status === 'in_progress' ? '#374151' : '#6B7280' }]}>
                   <ThemedText style={styles.statusText}>
                     {task.status === 'available' ? '可接取' : task.status === 'in_progress' ? '进行中' : '已完成'}
-                  </ThemedText>
+        </ThemedText>
                 </View>
               </View>
             </TouchableOpacity>
@@ -234,7 +236,7 @@ export default function TaskScreen() {
                 <View style={[styles.statusBadge, { backgroundColor: task.status === 'completed' ? '#1F2937' : task.status === 'in_progress' ? '#374151' : '#6B7280' }]}>
                   <ThemedText style={styles.statusText}>
                     {task.status === 'available' ? '可接取' : task.status === 'in_progress' ? '进行中' : '已完成'}
-                  </ThemedText>
+        </ThemedText>
                 </View>
               </View>
             </TouchableOpacity>
