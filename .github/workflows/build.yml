@@ -255,7 +255,7 @@ jobs:
           # Seek-Self 部署包
           
           ## 构建信息
-          - 版本: ${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}
+          - 项目: seek-self
           - 构建时间: $(date '+%Y-%m-%d %H:%M:%S UTC')
           - 分支: ${{ needs.prepare.outputs.branch_name }}
           - 提交: ${{ needs.prepare.outputs.commit_sha }}
@@ -306,7 +306,7 @@ jobs:
       - name: Upload deployment package
         uses: actions/upload-artifact@v4
         with:
-          name: seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}
+          name: seek-self
           path: deployment-package/
           retention-days: 30
 
@@ -335,13 +335,13 @@ jobs:
           echo "|-----|--------|------|" >> $GITHUB_STEP_SUMMARY
           echo "| Web | ${{ needs.prepare.outputs.version_web }} | ${{ needs.build-web.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Server | ${{ needs.prepare.outputs.version_server }} | ${{ needs.build-server.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 部署包 | ${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }} | ${{ needs.create-deployment-package.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 部署包 | seek-self | ${{ needs.create-deployment-package.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📥 产物下载" >> $GITHUB_STEP_SUMMARY
           echo "构建完成后，可在 Actions 页面的 Artifacts 部分下载以下产物：" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.create-deployment-package.result }}" == "success" ]; then
-            echo "🎯 **推荐下载**: \`seek-self-deployment-${{ needs.prepare.outputs.branch_name }}-${{ needs.prepare.outputs.build_time }}\` - 完整部署包" >> $GITHUB_STEP_SUMMARY
+            echo "🎯 **推荐下载**: \`seek-self\` - 完整部署包" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**部署步骤**:" >> $GITHUB_STEP_SUMMARY
             echo "1. 下载部署包到服务器" >> $GITHUB_STEP_SUMMARY
