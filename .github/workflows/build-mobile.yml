@@ -134,7 +134,7 @@ jobs:
           org.gradle.parallel=true
           org.gradle.configureondemand=true
           
-          # 构建缓存
+          # 构建缓存（使用 Gradle 内置缓存）
           org.gradle.caching=true
           
           # 禁用 Gradle Daemon 性能警告
@@ -144,7 +144,11 @@ jobs:
           android.useAndroidX=true
           android.enableJetifier=true
           android.enableR8.fullMode=true
-          android.enableBuildCache=true
+          
+          # React Native 优化
+          reactNativeArchitectures=arm64-v8a,armeabi-v7a
+          newArchEnabled=false
+          hermesEnabled=true
           EOF
 
       - name: Cache Gradle dependencies
@@ -166,16 +170,21 @@ jobs:
           echo "开始构建 Android APK..."
           echo "构建类型: ${{ github.event.inputs.build_type }}"
           
+          # 检查 Gradle 配置
+          echo "检查 Gradle 版本兼容性..."
+          ./gradlew --version
+          
           # 清理之前的构建
-          ./gradlew clean
+          echo "清理之前的构建..."
+          ./gradlew clean --no-daemon
           
           # 根据构建类型执行相应的构建命令
           if [ "${{ github.event.inputs.build_type }}" == "release" ]; then
             echo "构建 Release 版本..."
-            ./gradlew assembleRelease --no-daemon --stacktrace
+            ./gradlew assembleRelease --no-daemon --stacktrace --warning-mode all
           else
             echo "构建 Debug 版本..."
-            ./gradlew assembleDebug --no-daemon --stacktrace
+            ./gradlew assembleDebug --no-daemon --stacktrace --warning-mode all
           fi
           
           echo "构建完成！"
