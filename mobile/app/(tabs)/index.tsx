@@ -2,6 +2,8 @@ import { StyleSheet, View, TouchableOpacity, ScrollView, Alert } from 'react-nat
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useState } from 'react';
+import { useGlobalPeerMessages } from '@/hooks/useGlobalPeerMessages';
+import MessageModal from '@/components/MessageModal';
 
 interface Task {
   id: string;
@@ -17,6 +19,9 @@ interface Task {
 }
 
 export default function TaskScreen() {
+  // 全局消息管理
+  const { modalState, closeModal } = useGlobalPeerMessages();
+
   const [userStats, setUserStats] = useState({
     level: 12,
     exp: 350,
@@ -243,6 +248,16 @@ export default function TaskScreen() {
           ))}
         </View>
       </ThemedView>
+
+      {/* 消息弹窗 */}
+      <MessageModal
+        visible={modalState.visible}
+        title={modalState.title}
+        message={modalState.message}
+        senderId={modalState.senderId}
+        timestamp={modalState.timestamp}
+        onClose={closeModal}
+      />
     </ScrollView>
   );
 }

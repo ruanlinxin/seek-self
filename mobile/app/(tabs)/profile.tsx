@@ -1,23 +1,13 @@
 import { StyleSheet, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useReactPeer } from '@seek-self/utils';
-import { useEffect } from 'react';
+import { useGlobalPeerMessages } from '@/hooks/useGlobalPeerMessages';
+import MessageModal from '@/components/MessageModal';
 import * as Clipboard from 'expo-clipboard';
 
 export default function ProfileScreen() {
-  // 初始化 PeerJS
-  const { state: peerState, initialize } = useReactPeer({
-    debug: true,
-    autoConnect: false,
-  });
-
-  useEffect(() => {
-    // 组件挂载时自动初始化 Peer 连接
-    initialize().catch(error => {
-      console.error('Failed to initialize peer:', error);
-    });
-  }, [initialize]);
+  // 使用全局消息管理
+  const { peerState, modalState, messageHistory, closeModal, initialize } = useGlobalPeerMessages();
 
   // 复制在线ID到剪贴板
   const copyOnlineId = async () => {
@@ -36,6 +26,35 @@ export default function ProfileScreen() {
       Alert.alert('⚠️ 无法复制', '在线ID尚未生成，请等待连接建立', [
         { text: '确定', style: 'default' }
       ]);
+    }
+  };
+
+  // 重新尝试连接
+  const handleReconnect = async () => {
+    if (peerState.status !== 'ready' && peerState.status !== 'initializing') {
+      Alert.alert(
+        '🔄 重新连接',
+        '是否尝试重新建立 P2P 连接？',
+        [
+          { text: '取消', style: 'cancel' },
+          { 
+            text: '重新连接', 
+            style: 'default',
+            onPress: async () => {
+              try {
+                await initialize();
+                Alert.alert('✅ 连接中', '正在尝试重新建立连接...', [
+                  { text: '确定', style: 'default' }
+                ]);
+              } catch (error) {
+                Alert.alert('❌ 连接失败', '重新连接失败，请稍后再试', [
+                  { text: '确定', style: 'default' }
+                ]);
+              }
+            }
+          }
+        ]
+      );
     }
   };
 
@@ -80,19 +99,33 @@ export default function ProfileScreen() {
           <ThemedText style={styles.sectionTitle}>设备状态</ThemedText>
           
           <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
+            <TouchableOpacity 
+              style={[
+                styles.infoRow,
+                (peerState.status !== 'ready' && peerState.status !== 'initializing') && styles.reconnectRow
+              ]} 
+              onPress={peerState.status === 'ready' || peerState.status === 'initializing' ? undefined : handleReconnect}
+              disabled={peerState.status === 'ready' || peerState.status === 'initializing'}
+              activeOpacity={peerState.status === 'ready' || peerState.status === 'initializing' ? 1 : 0.7}
+            >
               <ThemedText style={styles.infoLabel}>连接状态</ThemedText>
               <View style={styles.statusContainer}>
                 <View style={[styles.statusDot, { 
                   backgroundColor: peerState.status === 'ready' ? '#10B981' : 
                                  peerState.status === 'initializing' ? '#F59E0B' : '#EF4444' 
                 }]} />
-                <ThemedText style={styles.statusText}>
+                <ThemedText style={[
+                  styles.statusText,
+                  (peerState.status !== 'ready' && peerState.status !== 'initializing') && styles.reconnectText
+                ]}>
                   {peerState.status === 'ready' ? '在线' : 
-                   peerState.status === 'initializing' ? '连接中' : '离线'}
+                   peerState.status === 'initializing' ? '连接中' : '离线 (点击重连)'}
                 </ThemedText>
+                {(peerState.status !== 'ready' && peerState.status !== 'initializing') && (
+                  <ThemedText style={styles.reconnectIcon}>🔄</ThemedText>
+                )}
               </View>
-            </View>
+            </TouchableOpacity>
             <View style={styles.divider} />
             
             <TouchableOpacity style={styles.infoRow} onPress={copyOnlineId}>
@@ -125,6 +158,16 @@ export default function ProfileScreen() {
           </ThemedText>
         </View>
       </ScrollView>
+
+      {/* 消息弹窗 */}
+      <MessageModal
+        visible={modalState.visible}
+        title={modalState.title}
+        message={modalState.message}
+        senderId={modalState.senderId}
+        timestamp={modalState.timestamp}
+        onClose={closeModal}
+      />
     </ThemedView>
   );
 }
@@ -240,6 +283,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+  },
+
+  // 重连相关样式
+  reconnectRow: {
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+    borderRadius: 8,
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
+  },
+  reconnectText: {
+    color: '#EF4444',
+    fontWeight: '600',
+  },
+  reconnectIcon: {
+    fontSize: 16,
+    marginLeft: 8,
+    color: '#EF4444',
   },
 
   // 说明文字样式

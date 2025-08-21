@@ -16,7 +16,11 @@
         "NSCameraUsageDescription": "此应用需要访问相机以支持视频通话功能",
         "NSMicrophoneUsageDescription": "此应用需要访问麦克风以支持语音通话功能"
       },
-      "bitcode": false
+      "bitcode": false,
+      "backgroundModes": [
+        "background-processing",
+        "voip"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -33,7 +37,9 @@
         "android.permission.INTERNET",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WAKE_LOCK",
-        "android.permission.BLUETOOTH"
+        "android.permission.BLUETOOTH",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ]
     },
     "web": {
