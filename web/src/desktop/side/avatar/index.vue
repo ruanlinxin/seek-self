@@ -12,10 +12,10 @@
 </template>
 <script setup lang="ts">
 import {getUserStore} from "@/modules/user/store";
-import {getAsyncComponent} from "@/views";
+import {getAsyncComponent} from "@/modules/app/meta";
 
-const LoginRegister = getAsyncComponent('loginRegister')
-const UserProfile = getAsyncComponent('userProfile')
+const LoginRegister = getAsyncComponent('LoginRegister')
+const UserProfile = getAsyncComponent('UserProfile')
 
 const userStore = getUserStore()
 const avatarText = computed(() => (userStore.profile.nickname || '请登录').substring(0, 4))

@@ -66,9 +66,8 @@
 </template>
 <script setup lang="ts">
 import {createApp, deleteApp, getAllApp, updateApp} from "@/modules/app/api";
-import {componentKeys} from "@/views";
 import {JSONEditor,DictSelect} from '@/components'
-import {defaultWindow} from "@/modules/app/meta";
+import {defaultWindow,componentKeys} from "@/modules/app/meta";
 import {getBasicStore} from "@/modules/basic/store";
 
 const basicStore = getBasicStore()

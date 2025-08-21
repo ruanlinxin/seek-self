@@ -1,15 +1,6 @@
 import type { SeekSelf } from '@seek-self/types';
 import { createLogger, logger } from '../logger';
 
-// 类型扩展
-declare global {
-  namespace NodeJS {
-    interface Global {
-      navigator: any;
-    }
-  }
-}
-
 // 类型别名，使用统一的类型定义
 export type PeerConfig = SeekSelf.Utils.Peer.Config;
 export type PeerConnection = SeekSelf.Utils.Peer.Connection;
@@ -20,6 +11,21 @@ export type ConnectionStatus = SeekSelf.Utils.Peer.ConnectionStatus;
 export type MessageType = SeekSelf.Utils.Peer.MessageType;
 export type EventType = SeekSelf.Utils.Peer.EventType;
 export type EventListener<T = any> = SeekSelf.Utils.Peer.EventListener<T>;
+
+// Peer实例接口
+export interface PeerInstance {
+  id?: string;
+  open: boolean;
+  destroyed: boolean;
+  disconnected: boolean;
+  on(event: string, handler: (...args: any[]) => void): void;
+  off(event: string, handler: (...args: any[]) => void): void;
+  connect(peerId: string, options?: any): any;
+  call(peerId: string, stream: MediaStream): any;
+  destroy(): void;
+  disconnect(): void;
+  reconnect(): void;
+}
 
 /**
  * 事件发射器 - 框架无关的事件系统
@@ -76,15 +82,17 @@ class EventEmitter<T = any> {
  * 支持 Web、React Native 和桌面应用之间的 P2P 通信
  */
 export class PeerManager extends EventEmitter {
-  private peer: any = null;
+  private peer: PeerInstance | null = null;
   private mediaStream: MediaStream | null = null;
   private currentCall: any = null;
   private options: PeerOptions;
   private state: PeerState;
   private logger = createLogger('PeerManager');
+  private PeerClass: any = null;
 
-  constructor(options: PeerOptions = {}) {
+  constructor(PeerClass: any, options: PeerOptions = {}) {
     super();
+    this.PeerClass = PeerClass;
     this.options = {
       config: {},
       autoConnect: false,
@@ -122,6 +130,15 @@ export class PeerManager extends EventEmitter {
   }
 
   /**
+   * 静态工厂方法 - 用于创建带有Peer类的实例
+   */
+  static async create(options: PeerOptions = {}): Promise<PeerManager> {
+    // 这个方法现在只提供向后兼容性
+    // 实际使用中应该传入具体的Peer类
+    throw new Error('请使用构造函数并传入Peer类: new PeerManager(PeerClass, options)');
+  }
+
+  /**
    * 获取当前状态
    */
   getState(): PeerState {
@@ -147,35 +164,16 @@ export class PeerManager extends EventEmitter {
   }
 
   /**
-   * 动态导入 PeerJS
+   * 验证Peer类是否有效
    */
-  private async loadPeerJS(): Promise<any> {
-    try {
-      // 更准确的 React Native 环境检测
-      const isReactNative = (
-        typeof navigator !== 'undefined' && navigator.product === 'ReactNative'
-      ) || (
-        typeof global !== 'undefined' && global.navigator && global.navigator.product === 'ReactNative'
-      ) || (
-        typeof __DEV__ !== 'undefined' && __DEV__ && typeof global !== 'undefined'
-      );
-
-      this.log('环境检测:', { isReactNative, navigator: typeof navigator, global: typeof global });
-
-      // 强制使用 React Native 版本（如果可用）
-      try {
-        this.log('优先尝试加载 react-native-peerjs');
-        const Peer = await import('react-native-peerjs') as any;
-        this.log('成功加载 react-native-peerjs');
-        return Peer.default || Peer;
-      } catch (rnError) {
-        this.log('react-native-peerjs 不可用，回退到标准 peerjs:', rnError);
-        // 回退到标准 peerjs
-        const { default: Peer } = await import('peerjs');
-        return Peer;
-      }
-    } catch (error) {
-      throw new Error(`加载 PeerJS 失败: ${error}`);
+  private validatePeerClass(): void {
+    if (!this.PeerClass) {
+      throw new Error('未提供Peer类，请在构造函数中传入Peer类');
+    }
+    
+    // 基本验证Peer类是否是构造函数
+    if (typeof this.PeerClass !== 'function') {
+      throw new Error('提供的Peer类必须是构造函数');
     }
   }
 
@@ -192,20 +190,21 @@ export class PeerManager extends EventEmitter {
     this.emit('peer:initializing', null);
 
     try {
-      const Peer = await this.loadPeerJS();
+      // 验证Peer类
+      this.validatePeerClass();
 
       const defaultConfig: PeerConfig = {
         debug: this.options.debug ? 2 : 0,
         host: "seek-self.leyuwangyou.fun",
         path: '/peerjs',
-        secure:true,
+        secure: true,
         ...this.options.config
       };
 
       this.log('使用配置初始化:', defaultConfig);
 
       // 创建 Peer 实例
-      this.peer = new Peer(customId || undefined, defaultConfig);
+      this.peer = new this.PeerClass(customId || undefined, defaultConfig);
       this.setupPeerEvents();
 
     } catch (error) {

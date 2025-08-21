@@ -9,6 +9,7 @@ import {
   PeerConnection,
   MessageType
 } from '@seek-self/utils';
+import Peer from 'react-native-peerjs';
 
 /**
  * React Hook 适配器
@@ -35,7 +36,7 @@ export function usePeer(options: PeerOptions = {}) {
 
   // 初始化 PeerManager
   useEffect(() => {
-    managerRef.current = new PeerManager(options);
+    managerRef.current = new PeerManager(Peer, options);
     const manager = managerRef.current;
 
     // 状态同步事件监听器

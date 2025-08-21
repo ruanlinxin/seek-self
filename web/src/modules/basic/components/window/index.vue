@@ -22,7 +22,7 @@
 import WindowResize from "@/modules/basic/components/window/window-resize.vue";
 import {getAppsStore} from "@/modules/app/store";
 import {App} from "@/modules/app/type";
-import {getAsyncComponent} from "@/views";
+import {getAsyncComponent} from "@/modules/app/meta";
 
 const appStore = getAppsStore()
 const props = defineProps<{
