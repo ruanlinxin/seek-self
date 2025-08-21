@@ -1,4 +1,14 @@
 import type { SeekSelf } from '@seek-self/types';
+import { createLogger, logger } from '../logger';
+
+// 类型扩展
+declare global {
+  namespace NodeJS {
+    interface Global {
+      navigator: any;
+    }
+  }
+}
 
 // 类型别名，使用统一的类型定义
 export type PeerConfig = SeekSelf.Utils.Peer.Config;
@@ -45,7 +55,8 @@ class EventEmitter<T = any> {
             timestamp: new Date()
           });
         } catch (error) {
-          console.error(`Error in event listener for ${event}:`, error);
+          // 使用全局logger，因为这里无法访问实例logger
+          logger.error(`Error in event listener for ${event}: ${error}`);
         }
       });
     }
@@ -70,6 +81,7 @@ export class PeerManager extends EventEmitter {
   private currentCall: any = null;
   private options: PeerOptions;
   private state: PeerState;
+  private logger = createLogger('PeerManager');
 
   constructor(options: PeerOptions = {}) {
     super();
@@ -121,7 +133,7 @@ export class PeerManager extends EventEmitter {
    */
   private log(...args: any[]): void {
     if (this.options.debug) {
-      console.log('[PeerManager]', ...args);
+      this.logger.debug(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '));
     }
   }
 
@@ -130,7 +142,7 @@ export class PeerManager extends EventEmitter {
    */
   private addError(error: string): void {
     this.state.errors.push(error);
-    this.log('Error:', error);
+    this.logger.error(error);
     this.emit('peer:error', { message: error, timestamp: new Date() });
   }
 
@@ -147,23 +159,23 @@ export class PeerManager extends EventEmitter {
       ) || (
         typeof __DEV__ !== 'undefined' && __DEV__ && typeof global !== 'undefined'
       );
-      
-      this.log('Environment detection:', { isReactNative, navigator: typeof navigator, global: typeof global });
-      
+
+      this.log('环境检测:', { isReactNative, navigator: typeof navigator, global: typeof global });
+
       // 强制使用 React Native 版本（如果可用）
       try {
-        this.log('Attempting to load react-native-peerjs first');
-        const Peer = await import('react-native-peerjs');
-        this.log('Successfully loaded react-native-peerjs');
+        this.log('优先尝试加载 react-native-peerjs');
+        const Peer = await import('react-native-peerjs') as any;
+        this.log('成功加载 react-native-peerjs');
         return Peer.default || Peer;
       } catch (rnError) {
-        this.log('react-native-peerjs not available, falling back to standard peerjs:', rnError);
+        this.log('react-native-peerjs 不可用，回退到标准 peerjs:', rnError);
         // 回退到标准 peerjs
         const { default: Peer } = await import('peerjs');
         return Peer;
       }
     } catch (error) {
-      throw new Error(`Failed to load PeerJS: ${error}`);
+      throw new Error(`加载 PeerJS 失败: ${error}`);
     }
   }
 
@@ -172,7 +184,7 @@ export class PeerManager extends EventEmitter {
    */
   async initialize(customId?: string): Promise<void> {
     if (this.state.isInitialized) {
-      this.log('Peer already initialized');
+      this.log('Peer 已经初始化');
       return;
     }
 
@@ -181,7 +193,7 @@ export class PeerManager extends EventEmitter {
 
     try {
       const Peer = await this.loadPeerJS();
-      
+
       const defaultConfig: PeerConfig = {
         debug: this.options.debug ? 2 : 0,
         host: "seek-self.leyuwangyou.fun",
@@ -190,14 +202,14 @@ export class PeerManager extends EventEmitter {
         ...this.options.config
       };
 
-      this.log('Initializing with config:', defaultConfig);
+      this.log('使用配置初始化:', defaultConfig);
 
       // 创建 Peer 实例
       this.peer = new Peer(customId || undefined, defaultConfig);
       this.setupPeerEvents();
 
     } catch (error) {
-      const errorMsg = `Failed to initialize peer: ${error}`;
+      const errorMsg = `初始化 peer 失败: ${error}`;
       this.addError(errorMsg);
       this.state.status = 'error';
     }
@@ -210,7 +222,7 @@ export class PeerManager extends EventEmitter {
     if (!this.peer) return;
 
     this.peer.on('open', (id: string) => {
-      this.log('Peer opened with ID:', id);
+      this.log('Peer 已打开，ID:', id);
       this.state.isInitialized = true;
       this.state.peerId = id;
       this.state.status = 'ready';
@@ -218,19 +230,19 @@ export class PeerManager extends EventEmitter {
     });
 
     this.peer.on('error', (error: any) => {
-      const errorMsg = `Peer error: ${error.message || error}`;
+      const errorMsg = `Peer 错误: ${error.message || error}`;
       this.addError(errorMsg);
       this.state.status = 'error';
     });
 
     this.peer.on('disconnected', () => {
-      this.log('Peer disconnected');
+      this.log('Peer 已断开连接');
       this.state.status = 'error';
       this.emit('peer:disconnected', null);
     });
 
     this.peer.on('close', () => {
-      this.log('Peer connection closed');
+      this.log('Peer 连接已关闭');
       this.state.isInitialized = false;
       this.state.peerId = null;
       this.state.status = 'idle';
@@ -256,7 +268,7 @@ export class PeerManager extends EventEmitter {
    * 处理传入连接
    */
   private handleIncomingConnection(conn: any): void {
-    this.log('Incoming connection from:', conn.peer);
+    this.log('来自以下设备的连接:', conn.peer);
     this.setupConnectionEvents(conn);
     this.emit('connection:incoming', { peerId: conn.peer, connection: conn });
   }
@@ -266,7 +278,7 @@ export class PeerManager extends EventEmitter {
    */
   private setupConnectionEvents(conn: any): void {
     conn.on('open', () => {
-      this.log('Connection opened with:', conn.peer);
+      this.log('与以下设备建立连接:', conn.peer);
       const connection: PeerConnection = {
         id: conn.peer,
         connection: conn,
@@ -274,7 +286,7 @@ export class PeerManager extends EventEmitter {
         connectedAt: new Date(),
         lastSeen: new Date()
       };
-      
+
       this.state.connections.set(conn.peer, connection);
       this.state.stats!.activeConnections = this.getConnectedPeers().length;
       this.emit('connection:open', { peerId: conn.peer, connection });
@@ -285,14 +297,14 @@ export class PeerManager extends EventEmitter {
     });
 
     conn.on('close', () => {
-      this.log('Connection closed with:', conn.peer);
+      this.log('与以下设备断开连接:', conn.peer);
       this.state.connections.delete(conn.peer);
       this.state.stats!.activeConnections = this.getConnectedPeers().length;
       this.emit('connection:close', { peerId: conn.peer });
     });
 
     conn.on('error', (error: any) => {
-      this.addError(`Connection error with ${conn.peer}: ${error}`);
+      this.addError(`与 ${conn.peer} 连接出错: ${error}`);
       this.emit('connection:error', { peerId: conn.peer, error });
     });
   }
@@ -301,7 +313,7 @@ export class PeerManager extends EventEmitter {
    * 处理传入通话
    */
   private handleIncomingCall(call: any): void {
-    this.log('Incoming call from:', call.peer);
+    this.log('来自以下设备的通话:', call.peer);
     this.currentCall = call;
     this.emit('call:incoming', { peerId: call.peer, call });
   }
@@ -318,10 +330,10 @@ export class PeerManager extends EventEmitter {
       from: fromPeerId
     };
 
-    this.log('Received message:', message);
+    this.log('收到消息:', message);
     this.state.messages.push(message);
     this.state.stats!.messagesReceived++;
-    
+
     // 限制消息历史长度
     if (this.state.messages.length > (this.options.messageHistoryLimit || 1000)) {
       this.state.messages.shift();
@@ -335,11 +347,11 @@ export class PeerManager extends EventEmitter {
    */
   async connect(targetPeerId: string, metadata?: Record<string, any>): Promise<void> {
     if (!this.peer || !this.state.isInitialized) {
-      throw new Error('Peer not initialized');
+      throw new Error('Peer 未初始化');
     }
 
     if (this.state.connections.has(targetPeerId)) {
-      this.log('Already connected to:', targetPeerId);
+      this.log('已连接到:', targetPeerId);
       return;
     }
 
@@ -347,7 +359,7 @@ export class PeerManager extends EventEmitter {
     this.emit('connection:connecting', { peerId: targetPeerId });
 
     try {
-      this.log('Connecting to:', targetPeerId);
+      this.log('正在连接到:', targetPeerId);
       const conn = this.peer.connect(targetPeerId, { metadata });
 
       const connection: PeerConnection = {
@@ -356,16 +368,16 @@ export class PeerManager extends EventEmitter {
         status: 'connecting',
         metadata
       };
-      
+
       this.state.connections.set(targetPeerId, connection);
       this.state.stats!.totalConnections++;
-      
+
       this.setupConnectionEvents(conn);
 
       // 连接超时处理
       const timeout = setTimeout(() => {
         if (this.state.connections.get(targetPeerId)?.status === 'connecting') {
-          this.addError(`Connection timeout with ${targetPeerId}`);
+          this.addError(`与 ${targetPeerId} 连接超时`);
           this.disconnect(targetPeerId);
         }
       }, this.options.connectionTimeout);
@@ -383,7 +395,7 @@ export class PeerManager extends EventEmitter {
 
     } catch (error) {
       this.state.isConnecting = false;
-      throw new Error(`Failed to connect to ${targetPeerId}: ${error}`);
+      throw new Error(`连接到 ${targetPeerId} 失败: ${error}`);
     }
   }
 
@@ -411,8 +423,8 @@ export class PeerManager extends EventEmitter {
    * 发送消息
    */
   async sendMessage<T = any>(
-    peerId: string, 
-    content: T, 
+    peerId: string,
+    content: T,
     type: MessageType = 'custom',
     options: {
       priority?: SeekSelf.Utils.Peer.Message['priority'];
@@ -422,7 +434,7 @@ export class PeerManager extends EventEmitter {
   ): Promise<void> {
     const connection = this.state.connections.get(peerId);
     if (!connection || connection.status !== 'connected') {
-      throw new Error(`No active connection to ${peerId}`);
+      throw new Error(`没有到 ${peerId} 的活动连接`);
     }
 
     const messageData = {
@@ -434,8 +446,8 @@ export class PeerManager extends EventEmitter {
 
     try {
       connection.connection.send(messageData);
-      this.log('Message sent to:', peerId, messageData);
-      
+      this.log('消息已发送到:', peerId, messageData);
+
       // 添加到消息历史
       const outgoingMessage: PeerMessage<T> = {
         id: Date.now().toString(),
@@ -451,7 +463,7 @@ export class PeerManager extends EventEmitter {
       this.state.stats!.messagesSent++;
       this.emit('message:sent', outgoingMessage);
     } catch (error) {
-      throw new Error(`Failed to send message to ${peerId}: ${error}`);
+      throw new Error(`发送消息到 ${peerId} 失败: ${error}`);
     }
   }
 
@@ -460,7 +472,7 @@ export class PeerManager extends EventEmitter {
    */
   async broadcastMessage<T = any>(content: T, type: MessageType = 'custom'): Promise<void> {
     const connectedPeers = this.getConnectedPeers();
-    const promises = connectedPeers.map(peerId => 
+    const promises = connectedPeers.map(peerId =>
       this.sendMessage(peerId, content, type)
     );
     await Promise.all(promises);
@@ -480,7 +492,7 @@ export class PeerManager extends EventEmitter {
             type: file.type,
             data: reader.result as string
           };
-          
+
           await this.sendMessage(peerId, fileData, 'file');
           onProgress?.(100);
           resolve();
@@ -498,11 +510,11 @@ export class PeerManager extends EventEmitter {
    */
   async startCall(peerId: string, mediaConfig?: SeekSelf.Utils.Peer.MediaConfig): Promise<void> {
     if (!this.options.enableMediaStreams) {
-      throw new Error('Media streams not enabled');
+      throw new Error('媒体流未启用');
     }
 
     if (!this.peer) {
-      throw new Error('Peer not initialized');
+      throw new Error('Peer 未初始化');
     }
 
     try {
@@ -510,27 +522,27 @@ export class PeerManager extends EventEmitter {
         video: mediaConfig?.video || true,
         audio: mediaConfig?.audio || true
       };
-      
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       this.mediaStream = stream;
-      
+
       const call = this.peer.call(peerId, stream);
       this.currentCall = call;
 
       call.on('stream', (remoteStream: MediaStream) => {
-        this.log('Received remote stream in call');
+        this.log('通话中收到远程流');
         this.emit('stream:added', { peerId, stream: remoteStream });
       });
 
       call.on('close', () => {
-        this.log('Call ended');
+        this.log('通话已结束');
         this.currentCall = null;
         this.emit('call:ended', { peerId });
       });
 
       this.emit('call:started', { peerId, call });
     } catch (error) {
-      throw new Error(`Failed to start call: ${error}`);
+      throw new Error(`发起通话失败: ${error}`);
     }
   }
 
@@ -539,7 +551,7 @@ export class PeerManager extends EventEmitter {
    */
   async answerCall(mediaConfig?: SeekSelf.Utils.Peer.MediaConfig): Promise<void> {
     if (!this.currentCall) {
-      throw new Error('No incoming call to answer');
+      throw new Error('没有来电可接听');
     }
 
     try {
@@ -547,13 +559,13 @@ export class PeerManager extends EventEmitter {
         video: mediaConfig?.video || true,
         audio: mediaConfig?.audio || true
       };
-      
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       this.mediaStream = stream;
       this.currentCall.answer(stream);
       this.emit('call:answered', { call: this.currentCall });
     } catch (error) {
-      throw new Error(`Failed to answer call: ${error}`);
+      throw new Error(`接听通话失败: ${error}`);
     }
   }
 
@@ -589,10 +601,10 @@ export class PeerManager extends EventEmitter {
   toggleMedia(type: 'audio' | 'video', enabled?: boolean): void {
     if (!this.mediaStream) return;
 
-    const tracks = type === 'audio' 
-      ? this.mediaStream.getAudioTracks() 
+    const tracks = type === 'audio'
+      ? this.mediaStream.getAudioTracks()
       : this.mediaStream.getVideoTracks();
-    
+
     tracks.forEach(track => {
       track.enabled = enabled !== undefined ? enabled : !track.enabled;
     });
@@ -604,8 +616,8 @@ export class PeerManager extends EventEmitter {
    * 清理资源
    */
   cleanup(): void {
-    this.log('Cleaning up peer connection');
-    
+    this.log('正在清理 peer 连接');
+
     // 关闭所有连接
     this.state.connections.forEach((conn: PeerConnection) => {
       conn.connection?.close();
@@ -653,12 +665,13 @@ export class PeerManager extends EventEmitter {
   }
 
   getConnectedPeers(): string[] {
-    return Array.from(this.state.connections.entries())
-      .filter(([_, conn]: [string, PeerConnection]) => conn.status === 'connected')
-      .map(([peerId]: [string, PeerConnection]) => peerId);
+    const connections = Array.from(this.state.connections.entries()) as [string, PeerConnection][];
+    return connections
+      .filter(([_, conn]) => conn.status === 'connected')
+      .map(([peerId]) => peerId);
   }
 
-  getLatency(peerId: string): number | null {
+  getLatency(_peerId: string): number | null {
     // 这里可以实现 ping 测试来获取延迟
     return null;
   }
@@ -675,15 +688,3 @@ export class PeerManager extends EventEmitter {
     return { ...this.state.stats };
   }
 }
-
-
-// 导出核心类和类型
-export { PeerManager };
-
-// 条件导出框架适配器
-export { usePeer as useReactPeer } from './react';
-// Vue 适配器仅在 Vue 环境中可用
-// export { usePeer as useVuePeer } from './vue';
-
-// 默认导出核心类
-export default PeerManager;

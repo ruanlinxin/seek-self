@@ -1,20 +1,8 @@
 import { ApiResponse } from '@seek-self/types';
 export * from './request'
 export * from './token'
-// 仅导出核心 PeerJS 功能和 React Hook，避免 Vue 依赖问题
-export { 
-  PeerManager, 
-  useReactPeer,
-  type PeerConfig,
-  type PeerConnection,
-  type PeerMessage,
-  type PeerState,
-  type PeerOptions,
-  type ConnectionStatus,
-  type MessageType,
-  type EventType,
-  type EventListener
-} from './use-peer'
+export * from './logger'
+export * from './use-peer'
 
 export function generateId(): string {
   return Math.random().toString(36).substr(2, 9);

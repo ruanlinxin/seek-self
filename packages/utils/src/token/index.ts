@@ -1,3 +1,4 @@
+
 const key = 'seek-self-token-user'
 
 export const token = {

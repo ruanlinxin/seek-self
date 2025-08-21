@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { PeerManager, PeerOptions, PeerState, EventType, EventListener } from './index';
-import type { SeekSelf } from '@seek-self/types';
+import { 
+  PeerManager, 
+  PeerOptions, 
+  PeerState, 
+  EventType, 
+  EventListener,
+  PeerMessage,
+  PeerConnection,
+  MessageType
+} from '@seek-self/utils';
 
 /**
  * React Hook 适配器
  * 将 PeerManager 包装为 React Hook
  */
-export function usePeer(options: PeerOptions = {}): SeekSelf.Utils.Peer.HookReturn {
+export function usePeer(options: PeerOptions = {}) {
   const managerRef = useRef<PeerManager | null>(null);
   const [state, setState] = useState<PeerState>({
     isInitialized: false,
@@ -92,9 +100,9 @@ export function usePeer(options: PeerOptions = {}): SeekSelf.Utils.Peer.HookRetu
   const sendMessage = useCallback(async <T = any>(
     peerId: string,
     content: T,
-    type?: SeekSelf.Utils.Peer.MessageType,
+    type?: MessageType,
     options?: {
-      priority?: SeekSelf.Utils.Peer.Message['priority'];
+      priority?: 'low' | 'normal' | 'high';
       requiresAck?: boolean;
       metadata?: Record<string, any>;
     }
@@ -104,13 +112,13 @@ export function usePeer(options: PeerOptions = {}): SeekSelf.Utils.Peer.HookRetu
     }
   }, []);
 
-  const broadcastMessage = useCallback(async <T = any>(content: T, type?: SeekSelf.Utils.Peer.MessageType) => {
+  const broadcastMessage = useCallback(async <T = any>(content: T, type?: MessageType) => {
     if (managerRef.current) {
       await managerRef.current.broadcastMessage(content, type);
     }
   }, []);
 
-  const sendAck = useCallback((messageId: string, peerId: string, status: SeekSelf.Utils.Peer.Message['ackStatus']) => {
+  const sendAck = useCallback((messageId: string, peerId: string, status: 'pending' | 'delivered' | 'failed') => {
     // 发送确认消息的实现
     if (managerRef.current) {
       managerRef.current.sendMessage(peerId, { messageId, status }, 'system');
@@ -123,13 +131,13 @@ export function usePeer(options: PeerOptions = {}): SeekSelf.Utils.Peer.HookRetu
     }
   }, []);
 
-  const startCall = useCallback(async (peerId: string, mediaConfig?: SeekSelf.Utils.Peer.MediaConfig) => {
+  const startCall = useCallback(async (peerId: string, mediaConfig?: { video?: boolean; audio?: boolean }) => {
     if (managerRef.current) {
       await managerRef.current.startCall(peerId, mediaConfig);
     }
   }, []);
 
-  const answerCall = useCallback(async (mediaConfig?: SeekSelf.Utils.Peer.MediaConfig) => {
+  const answerCall = useCallback(async (mediaConfig?: { video?: boolean; audio?: boolean }) => {
     if (managerRef.current) {
       await managerRef.current.answerCall(mediaConfig);
     }
@@ -192,14 +200,14 @@ export function usePeer(options: PeerOptions = {}): SeekSelf.Utils.Peer.HookRetu
   const clearMessages = useCallback(() => {
     if (managerRef.current) {
       managerRef.current.clearMessages();
-      setState(prev => ({ ...prev, messages: [] }));
+      setState((prev: PeerState) => ({ ...prev, messages: [] }));
     }
   }, []);
 
   const clearErrors = useCallback(() => {
     if (managerRef.current) {
       managerRef.current.clearErrors();
-      setState(prev => ({ ...prev, errors: [] }));
+      setState((prev: PeerState) => ({ ...prev, errors: [] }));
     }
   }, []);
 

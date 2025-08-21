@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useReactPeer } from '@seek-self/utils';
+import { usePeer } from './usePeer';
+import { createLogger } from '@seek-self/utils';
 
 interface PeerMessage {
   id: string;
@@ -20,7 +21,9 @@ interface MessageModalState {
 }
 
 export function useGlobalPeerMessages() {
-  const { state: peerState, initialize, on, off, cleanup } = useReactPeer({
+  const logger = createLogger('GlobalPeerMessages');
+  
+  const { state: peerState, initialize, on, off, cleanup } = usePeer({
     debug: true,
     autoConnect: false,
   });
@@ -39,35 +42,35 @@ export function useGlobalPeerMessages() {
 
   // 初始化 PeerJS
   useEffect(() => {
-    initialize().catch(error => {
-      console.error('Failed to initialize peer:', error);
+    initialize().catch((error: any) => {
+      logger.error(`初始化 peer 失败: ${error}`);
     });
   }, [initialize]);
 
   // 应用状态变化监听
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      console.log('App state changed from', appState.current, 'to', nextAppState);
+      logger.debug(`应用状态从 ${appState.current} 变更为 ${nextAppState}`);
       
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         // 从后台回到前台
-        console.log('App has come to the foreground!');
+        logger.info('应用已回到前台!');
         
         // 如果之前有连接且现在断开了，尝试重连
         if (wasConnectedBeforeBackground.current && peerState.status !== 'ready') {
-          console.log('Attempting to reconnect after returning from background');
+          logger.info('从后台返回后尝试重新连接');
           
           // 延迟重连，给系统一些时间恢复网络
           reconnectTimer.current = setTimeout(() => {
-            initialize().catch(error => {
-              console.error('Failed to reconnect after background:', error);
+            initialize().catch((error: any) => {
+              logger.error(`后台返回后重连失败: ${error}`);
             });
-          }, 2000);
+          }, 2000) as any;
         }
         
       } else if (nextAppState.match(/inactive|background/)) {
         // 进入后台
-        console.log('App has gone to the background');
+        logger.info('应用已进入后台');
         
         // 记录当前连接状态
         wasConnectedBeforeBackground.current = peerState.status === 'ready';
@@ -81,12 +84,12 @@ export function useGlobalPeerMessages() {
         // 优雅地关闭连接，避免报错
         try {
           if (peerState.status === 'ready') {
-            console.log('Gracefully closing peer connection before background');
+            logger.info('进入后台前优雅关闭 peer 连接');
             // 不完全关闭，只是标记状态
             // cleanup(); // 注释掉完全清理，避免报错
           }
         } catch (error) {
-          console.log('Error during background cleanup:', error);
+          logger.warn(`后台清理时出错: ${error}`);
         }
       }
       
@@ -148,7 +151,7 @@ export function useGlobalPeerMessages() {
   // 事件监听
   useEffect(() => {
     const handleMessage = (data: any) => {
-      console.log('收到消息:', data);
+      logger.info('收到消息:', data);
       
       // 直接转换成 JSON 字符串显示
       const messageContent = data ? JSON.stringify(data, null, 2) : '无消息内容';
@@ -164,7 +167,7 @@ export function useGlobalPeerMessages() {
     };
 
     const handleConnectionOpen = (data: any) => {
-      console.log('新设备连接:', data);
+      logger.info('新设备连接:', data);
       const deviceId = data?.peerId || data?.connectionId || '未知设备';
       showMessage(
         '🔗 设备已连接',
@@ -175,7 +178,7 @@ export function useGlobalPeerMessages() {
     };
 
     const handleConnectionClose = (data: any) => {
-      console.log('设备断开:', data);
+      logger.info('设备断开:', data);
       const deviceId = data?.peerId || data?.connectionId || '未知设备';
       showMessage(
         '📱 设备已断开',
@@ -186,11 +189,11 @@ export function useGlobalPeerMessages() {
     };
 
     const handlePeerError = (data: any) => {
-      console.log('Peer 错误:', data);
+      logger.error('Peer 错误:', data);
       
       // 如果应用在后台，不显示错误弹窗
       if (appState.current.match(/background/)) {
-        console.log('App is in background, suppressing error notification');
+        logger.debug('应用在后台，抑制错误通知');
         return;
       }
       
@@ -201,7 +204,7 @@ export function useGlobalPeerMessages() {
                            data?.message?.includes('disconnected');
                            
       if (isNetworkError) {
-        console.log('Network error detected, will attempt auto-reconnect');
+        logger.info('检测到网络错误，将尝试自动重连');
         // 网络错误不显示弹窗，等待自动重连
         return;
       }
@@ -217,7 +220,7 @@ export function useGlobalPeerMessages() {
     };
 
     const handlePeerOpen = (data: any) => {
-      console.log('Peer 连接成功:', data);
+      logger.info('Peer 连接成功:', data);
       const peerId = data?.peerId || '未知ID';
       showMessage(
         '✅ 连接成功',
