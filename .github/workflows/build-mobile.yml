@@ -113,11 +113,6 @@ jobs:
       - name: Install Lerna globally
         run: npm install -g lerna@^8.2.3
 
-      - name: Clear Expo cache
-        run: |
-          echo "清理 Expo 缓存..."
-          yarn workspace mobile expo start --clear || true
-
       - name: Prebuild Android (Always)
         run: |
           echo "执行预构建 (流水线中总是执行)..."
