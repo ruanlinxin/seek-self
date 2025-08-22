@@ -1,31 +1,34 @@
-import type { SeekSelf } from '@seek-self/types';
+import {
+  PeerConfig,
+  PeerConnection,
+  PeerMessage,
+  PeerState,
+  PeerOptions,
+  ConnectionStatus,
+  MessageType,
+  EventType,
+  EventListener,
+  PeerInstance,
+  FileContent,
+  MediaConfig
+} from '@seek-self/types/src/utils/peer';
 import { createLogger, logger } from '../logger';
 
-// 类型别名，使用统一的类型定义
-export type PeerConfig = SeekSelf.Utils.Peer.Config;
-export type PeerConnection = SeekSelf.Utils.Peer.Connection;
-export type PeerMessage<T = any> = SeekSelf.Utils.Peer.Message<T>;
-export type PeerState = SeekSelf.Utils.Peer.State;
-export type PeerOptions = SeekSelf.Utils.Peer.HookOptions;
-export type ConnectionStatus = SeekSelf.Utils.Peer.ConnectionStatus;
-export type MessageType = SeekSelf.Utils.Peer.MessageType;
-export type EventType = SeekSelf.Utils.Peer.EventType;
-export type EventListener<T = any> = SeekSelf.Utils.Peer.EventListener<T>;
-
-// Peer实例接口
-export interface PeerInstance {
-  id?: string;
-  open: boolean;
-  destroyed: boolean;
-  disconnected: boolean;
-  on(event: string, handler: (...args: any[]) => void): void;
-  off(event: string, handler: (...args: any[]) => void): void;
-  connect(peerId: string, options?: any): any;
-  call(peerId: string, stream: MediaStream): any;
-  destroy(): void;
-  disconnect(): void;
-  reconnect(): void;
-}
+// 重新导出类型
+export type {
+  PeerConfig,
+  PeerConnection,
+  PeerMessage,
+  PeerState,
+  PeerOptions,
+  ConnectionStatus,
+  MessageType,
+  EventType,
+  EventListener,
+  PeerInstance,
+  FileContent,
+  MediaConfig
+};
 
 /**
  * 事件发射器 - 框架无关的事件系统
@@ -365,7 +368,7 @@ export class PeerManager extends EventEmitter {
         id: targetPeerId,
         connection: conn,
         status: 'connecting',
-        metadata
+        ...(metadata && { metadata })
       };
 
       this.state.connections.set(targetPeerId, connection);
@@ -426,7 +429,7 @@ export class PeerManager extends EventEmitter {
     content: T,
     type: MessageType = 'custom',
     options: {
-      priority?: SeekSelf.Utils.Peer.Message['priority'];
+      priority?: PeerMessage['priority'];
       requiresAck?: boolean;
       metadata?: Record<string, any>;
     } = {}
@@ -455,7 +458,9 @@ export class PeerManager extends EventEmitter {
         timestamp: new Date(),
         from: this.state.peerId || 'me',
         to: peerId,
-        ...options
+        ...(options.requiresAck !== undefined && { requiresAck: options.requiresAck }),
+        ...(options.priority && { priority: options.priority }),
+        ...(options.metadata && { metadata: options.metadata })
       };
 
       this.state.messages.push(outgoingMessage);
@@ -485,7 +490,7 @@ export class PeerManager extends EventEmitter {
       const reader = new FileReader();
       reader.onload = async () => {
         try {
-          const fileData: SeekSelf.Utils.Peer.FileContent = {
+          const fileData: FileContent = {
             name: 'name' in file ? file.name : 'unknown',
             size: file.size,
             type: file.type,
@@ -507,7 +512,7 @@ export class PeerManager extends EventEmitter {
   /**
    * 发起通话
    */
-  async startCall(peerId: string, mediaConfig?: SeekSelf.Utils.Peer.MediaConfig): Promise<void> {
+  async startCall(peerId: string, mediaConfig?: MediaConfig): Promise<void> {
     if (!this.options.enableMediaStreams) {
       throw new Error('媒体流未启用');
     }
@@ -548,7 +553,7 @@ export class PeerManager extends EventEmitter {
   /**
    * 接听通话
    */
-  async answerCall(mediaConfig?: SeekSelf.Utils.Peer.MediaConfig): Promise<void> {
+  async answerCall(mediaConfig?: MediaConfig): Promise<void> {
     if (!this.currentCall) {
       throw new Error('没有来电可接听');
     }
@@ -684,6 +689,12 @@ export class PeerManager extends EventEmitter {
   }
 
   getStats(): PeerState['stats'] {
-    return { ...this.state.stats };
+    return {
+      totalConnections: this.state.stats?.totalConnections || 0,
+      activeConnections: this.state.stats?.activeConnections || 0,
+      messagesSent: this.state.stats?.messagesSent || 0,
+      messagesReceived: this.state.stats?.messagesReceived || 0,
+      bytesTransferred: this.state.stats?.bytesTransferred || 0
+    };
   }
 }

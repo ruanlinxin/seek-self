@@ -3,7 +3,8 @@ import { AppState, AppStateStatus } from 'react-native';
 import { usePeer } from './usePeer';
 import { createLogger } from '@seek-self/utils';
 
-interface PeerMessage {
+// 本地消息接口，适配当前使用场景
+interface LocalPeerMessage {
   id: string;
   senderId: string;
   message: string;
@@ -35,7 +36,7 @@ export function useGlobalPeerMessages() {
     type: 'message',
   });
 
-  const [messageHistory, setMessageHistory] = useState<PeerMessage[]>([]);
+  const [messageHistory, setMessageHistory] = useState<LocalPeerMessage[]>([]);
   const appState = useRef(AppState.currentState);
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
   const wasConnectedBeforeBackground = useRef(false);
@@ -109,7 +110,7 @@ export function useGlobalPeerMessages() {
   }, [peerState.status, initialize]);
 
   // 添加消息到历史记录
-  const addToHistory = (message: PeerMessage) => {
+  const addToHistory = (message: LocalPeerMessage) => {
     setMessageHistory(prev => [message, ...prev].slice(0, 100)); // 只保留最新100条
   };
 

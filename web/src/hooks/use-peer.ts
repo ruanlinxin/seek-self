@@ -310,19 +310,20 @@ export default function usePeer(options: PeerOptions = {}) {
   // === 便捷方法 ===
   const getMessagesByPeer = (peerId: string) => {
     return computed(() => 
-      state.messages.filter(msg => msg.from === peerId || msg.to === peerId)
+      state.messages.filter((msg: any) => msg.from === peerId || msg.to === peerId)
     );
   };
 
   const getConnectionList = computed(() => {
-    return Array.from(state.connections.entries()).map(([peerId, connection]) => ({
+    const entries = Array.from(state.connections.entries()) as Array<[string, any]>;
+    return entries.map(([peerId, connection]) => ({
       peerId,
       ...connection
     }));
   });
 
   const getErrorList = computed(() => {
-    return state.errors.map((error, index) => ({
+    return state.errors.map((error: any, index: number) => ({
       id: index,
       message: error,
       timestamp: new Date()

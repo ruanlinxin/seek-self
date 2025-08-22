@@ -1,5 +1,5 @@
 import { AxiosResponse } from 'axios'
-import { createRequest } from '@seek-self/utils'
+import { createRequest } from '@seek-self/utils/src/request'
 
 type reqEvent = (response:AxiosResponse) => void
 
