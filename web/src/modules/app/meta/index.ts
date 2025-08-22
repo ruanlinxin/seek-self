@@ -1,6 +1,6 @@
 import {App} from "@/modules/app/type";
 import {cloneDeep} from "lodash";
-import {genId} from "@/tools";
+import {generateId} from '@seek-self/utils'
 export * from '../loader'
 
 
@@ -35,7 +35,7 @@ export const gen = {
     }
 }
 export const genRunningAppInfo = (entity: App.entity): App.running => {
-    const id = genId('app')
+    const id = generateId('app')
     return {
         id,
         entity: cloneDeep(entity) as App.entity,

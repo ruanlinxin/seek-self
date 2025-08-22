@@ -13,7 +13,8 @@
 </template>
 <script setup lang="ts">
 import JSON5 from 'json5'
-import {genId, message} from "@/tools";
+import {generateId} from '@seek-self/utils'
+import {message} from "@/tools";
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
 
 if (!self.MonacoEnvironment) {
@@ -40,7 +41,7 @@ const showText = computed(() => JSON.stringify(props.modelValue, null, 2))
 const key = ref()
 let instance
 const open = () => {
-  key.value = genId('json-editor')
+  key.value = generateId('json-editor')
   modalVisible.value = true
   nextTick(() => {
     try {
