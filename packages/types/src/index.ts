@@ -30,26 +30,7 @@ export interface User {
   createdAt: Date;
 }
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
 
-export interface PaginationParams {
-  page: number;
-  limit: number;
-}
-
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
 
 // 导出命名空间类型
 export import SeekSelf = require('./seek-self');

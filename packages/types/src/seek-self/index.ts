@@ -333,11 +333,7 @@ declare namespace SeekSelf {
   /** API 响应类型别名 */
   type ApiResponse<T = any> = Utils.ApiResponse<T>;
   
-  /** 分页参数类型别名 */
-  type PaginationParams = Utils.PaginationParams;
   
-  /** 分页响应类型别名 */
-  type PaginatedResponse<T> = Utils.PaginatedResponse<T>;
   
   /** Peer 相关类型别名 */
   namespace Peer {

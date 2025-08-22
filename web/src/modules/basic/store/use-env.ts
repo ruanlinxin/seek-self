@@ -1,30 +1,12 @@
-import {request} from "@/tools";
-
-const getEnv = (): Result<{
-    dicts: DictEntity[]
-    todayBingImage:{
-        fullUrl:string
-        [index:string]: any
-    }
-}> => request.get('/env/summary')
-
-interface DictEntity {
-    id: string
-    key: string
-    value: string
-    type: string
-    description: string
-    orderNo: number
-    enabled: boolean
-}
-
+import {EnvAPI} from '@seek-self/api/src/env/'
+import type { Dict } from '@seek-self/types/src/modules/env'
 
 export default function () {
-    const dictMap = ref<Record<string, DictEntity[]>>({})
+    const dictMap = ref<Record<string, Dict[]>>({})
     const background = ref('')
     const reload = () => {
-        return getEnv().then(res => {
-            const _dictMap: Record<string, DictEntity[]> = {}
+        return EnvAPI.getSummary().then(res => {
+            const _dictMap: Record<string, Dict[]> = {}
             const {dicts,todayBingImage} = res.data
             dicts.forEach(item => {
                 if (!(item.type in _dictMap)) {

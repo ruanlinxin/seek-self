@@ -11,7 +11,8 @@ const isSuccessCode = (code: number) => [200].includes(code)
 
 export const createRequest = (option: CreateAxiosDefaults, events?: RequestEvents) => {
     const base = {
-        timeout: 10 * 1000
+        timeout: 10 * 1000,
+        baseURL:'/api'
     }
     const _axios = axios.create({
         ...base,
@@ -27,7 +28,7 @@ export const createRequest = (option: CreateAxiosDefaults, events?: RequestEvent
     _axios.interceptors.response.use(response => {
         const {data} = response
         if (isSuccessCode(data.code)){
-            events?.onIsSuccessCode?.(data.code)
+            events?.onIsSuccessCode?.(data)
             return Promise.resolve(data)
         }
         events?.onIsErrorCode?.(response)

@@ -89,40 +89,7 @@ declare namespace SeekSelf.Utils {
     timestamp?: Date;
   }
 
-  /**
-   * 分页参数
-   */
-  interface PaginationParams {
-    /** 页码 */
-    page: number;
-    /** 每页数量 */
-    limit: number;
-    /** 排序字段 */
-    sortBy?: string;
-    /** 排序方向 */
-    sortOrder?: 'asc' | 'desc';
-  }
 
-  /**
-   * 分页响应
-   */
-  interface PaginatedResponse<T> extends ApiResponse<T[]> {
-    /** 分页信息 */
-    pagination: {
-      /** 当前页码 */
-      page: number;
-      /** 每页数量 */
-      limit: number;
-      /** 总记录数 */
-      total: number;
-      /** 总页数 */
-      totalPages: number;
-      /** 是否有下一页 */
-      hasNext: boolean;
-      /** 是否有上一页 */
-      hasPrev: boolean;
-    };
-  }
 
   /**
    * 缓存配置

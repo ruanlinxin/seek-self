@@ -5,6 +5,8 @@ node_modules/
 /mobile/.expo
 
 
-
+.vscode
+.qoder
+.DS_Store
 . cursorrules
 *-error.log

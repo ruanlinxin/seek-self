@@ -383,5 +383,8 @@ declare namespace SeekSelf.Utils.Peer {
 }
 
 // 导出命名空间
-export = SeekSelf.Utils.Peer;
+export = SeekSelfUtilsPeer;
 export as namespace SeekSelfUtilsPeer;
+
+
+
