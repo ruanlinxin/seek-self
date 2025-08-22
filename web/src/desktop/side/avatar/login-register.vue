@@ -30,7 +30,9 @@
   </a-form>
 </template>
 <script setup lang="ts">
-import {login, register} from "@/modules/user/api";
+import { 
+  loginUser,registerUser
+} from '@seek-self/api/src/user'
 import {pick} from 'lodash'
 import {message} from "@/tools";
 import {getUserStore} from "@/modules/user/store";
@@ -76,7 +78,7 @@ const handleLogin = () => {
   formRef.value.validateField(['password', 'username']).then((err?: object) => {
     if (!err) {
       const data = pick(view.formData, ['password', 'username'])
-      login(data).then(res => {
+      loginUser(data).then(res => {
         userStore.setToken(res.data.access_token)
         message.success('登录成功')
         emit('close')
@@ -88,7 +90,7 @@ const handleRegister = () => {
   formRef.value.validate().then((err?: object) => {
     if (!err) {
       const data = pick(view.formData, ['password', 'username'])
-      register(data).then(res => {
+      registerUser(data).then(res => {
         tab.value = 'login'
         message.success('注册成功')
       })

@@ -1,14 +1,15 @@
 import {defineStore} from 'pinia';
 import {token} from '@seek-self/utils'
 import {store} from '@/store';
-import {getUserInfo} from "@/modules/user/api";
+import {getUserProfile, type UserProfile} from '@seek-self/api/src/user'
+import {Gender} from '@seek-self/types/src/modules/user'
 
-export const defaultProfile = () => ({
+export const defaultProfile = (): UserProfile => ({
     userId: '',
     nickname: '',
     avatar: '',
-    gender: 0,
-    birth: '',
+    gender: Gender.UNKNOWN,
+    birth: undefined,
     bio: ''
 })
 export const useUserStore = defineStore('user', () => {
@@ -17,8 +18,10 @@ export const useUserStore = defineStore('user', () => {
     watchEffect(() => {
         const t = curToken.value
         if (t) {
-            getUserInfo().then(res => {
-                profile.value = res.data.profile as typeof profile.value
+            getUserProfile().then(res => {
+                if (res.data.profile) {
+                    profile.value = res.data.profile
+                }
             }).catch(() => {
                 token.remove()
                 curToken.value = null

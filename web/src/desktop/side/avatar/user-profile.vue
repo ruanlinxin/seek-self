@@ -27,7 +27,7 @@
 <script setup lang="ts">
 
 import {getUserStore} from "@/modules/user/store";
-import {updateProfile} from "@/modules/user/api";
+import {updateUserProfile} from '@seek-self/api/src/user'
 import {message} from "@/tools";
 
 const emit = defineEmits(['close'])
@@ -52,7 +52,7 @@ const handleTabChange = (key: string) => {
 }
 
 const handleSave = () => {
-  updateProfile(view.profile).then(res => {
+  updateUserProfile(view.profile).then(res => {
     Object.assign(userStore.profile, view.profile)
     message.success('保存成功')
   })
