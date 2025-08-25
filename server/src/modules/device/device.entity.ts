@@ -5,12 +5,12 @@ import { User } from '@/modules/user/user.entity';
 @Entity('device')
 @Index(['userId', 'deviceId'])
 export class Device extends BaseEntity {
-  @Column({ type: 'varchar', length: 21, comment: '用户ID' })
-  userId: string;
+  @Column({ type: 'varchar', length: 21, nullable: true, comment: '用户ID（匿名设备时为空）' })
+  userId: string | null;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user: User | null;
 
   @Column({ type: 'varchar', length: 100, comment: '设备唯一标识' })
   deviceId: string;

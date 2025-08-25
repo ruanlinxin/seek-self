@@ -8,13 +8,13 @@ const onSuccessList: reqEvent[] = []
 
 
 export const initRequest = (options?: {
-    baseURL: string
+    baseURL?: string
     onSuccess?: reqEvent,
     onError?: reqEvent
 }) => {
     if(options){
-        const {onSuccess,onError} =  options
-        request.defaults.baseURL = options.baseURL
+        const {baseURL,onSuccess,onError} =  options
+        baseURL && (request.defaults.baseURL = baseURL)
         onSuccess && onSuccessList.push(onSuccess)
         onError && onErrorList.push(onError)
     }

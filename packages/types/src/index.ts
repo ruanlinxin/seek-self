@@ -1,3 +1,6 @@
 export * from './base'
 export * from './utils/peer'
 export * from './modules/app'
+export * from './modules/device'
+export * from './modules/user'
+export * from './modules/env'

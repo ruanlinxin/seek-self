@@ -199,7 +199,66 @@ export class DeviceService {
   }
 
   /**
-   * 心跳检测 - 更新设备活跃时间
+   * 心跳检测 - 更新设备活跃时间，如果设备不存在则自动注册
+   */
+  async heartbeatWithAutoRegister(userId: string, deviceId: string, deviceInfo?: CreateDeviceDto): Promise<Device | null> {
+    const device = await this.deviceRepository.findOne({
+      where: { userId, deviceId },
+    });
+
+    if (!device && deviceInfo) {
+      // 设备不存在且提供了设备信息，自动注册
+      return await this.createOrUpdateDevice(userId, { deviceId, ...deviceInfo });
+    } else if (device) {
+      // 设备存在，更新活跃时间
+      await this.deviceRepository.update(
+        { userId, deviceId },
+        {
+          lastActiveAt: new Date(),
+          isOnline: true,
+        },
+      );
+      // 返回更新后的设备信息
+      return await this.deviceRepository.findOne({
+        where: { userId, deviceId },
+      });
+    }
+    
+    return null;
+  }
+
+  /**
+   * 设置设备上线状态，如果设备不存在则自动注册
+   */
+  async setOnlineWithAutoRegister(userId: string, deviceId: string, isOnline: boolean, deviceInfo?: CreateDeviceDto): Promise<Device | null> {
+    const device = await this.deviceRepository.findOne({
+      where: { userId, deviceId },
+    });
+
+    if (!device && deviceInfo) {
+      // 设备不存在且提供了设备信息，自动注册
+      return await this.createOrUpdateDevice(userId, { deviceId, ...deviceInfo });
+    } else if (device) {
+      // 设备存在，更新在线状态
+      await this.deviceRepository.update(
+        { userId, deviceId },
+        {
+          isOnline,
+          lastActiveAt: new Date(),
+          updatedBy: userId,
+        },
+      );
+      // 返回更新后的设备信息
+      return await this.deviceRepository.findOne({
+        where: { userId, deviceId },
+      });
+    }
+    
+    return null;
+  }
+
+  /**
+   * 心跳检测 - 更新设备活跃时间（原方法，保留兼容性）
    */
   async heartbeat(userId: string, deviceId: string): Promise<void> {
     await this.deviceRepository.update(
