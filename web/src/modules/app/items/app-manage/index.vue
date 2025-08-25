@@ -65,7 +65,7 @@
   </a-modal>
 </template>
 <script setup lang="ts">
-import {createApp, deleteApp, getAllApp, updateApp} from "@/modules/app/api";
+import {AppAPI} from '@seek-self/api'
 import {JSONEditor,DictSelect} from '@/components'
 import {defaultWindow,componentKeys} from "@/modules/app/meta";
 import {getBasicStore} from "@/modules/basic/store";
@@ -175,7 +175,7 @@ const open = (data: object) => {
 }
 const handleSubmit = () => {
   const {id, ...data} = modal.formData
-  const fn = id ? updateApp(id, data) : createApp(data)
+  const fn = id ? AppAPI.update(id, data) : AppAPI.create(data)
   fn.finally(() => {
     loadTableData()
   })
@@ -183,13 +183,13 @@ const handleSubmit = () => {
 
 const loadTableData = () => {
   tableProps.data = []
-  getAllApp().then(res => {
+  AppAPI.getAll().then(res => {
     tableProps.data = res.data
   })
 }
 
 const delApp = (id) => {
-  deleteApp(id).finally(() => {
+  AppAPI.delete(id).finally(() => {
     loadTableData()
   })
 }

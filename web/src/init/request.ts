@@ -1,10 +1,15 @@
-import { initEvent } from '@seek-self/api'
-import { logger } from '@seek-self/utils'
+import {initRequest} from '@seek-self/api'
+import {logger} from '@seek-self/utils'
+import {getEnvByKey} from "@/tools/env";
 
-const onSuccess = ()=>{
+const onSuccess = () => {
 }
-const onError = ()=>{
+const onError = () => {
 }
-export default function(){
-    initEvent(onSuccess,onError)
+export default function () {
+    initRequest({
+        onSuccess,
+        onError,
+        baseURL: getEnvByKey('requestUrlPrefix')
+    })
 }

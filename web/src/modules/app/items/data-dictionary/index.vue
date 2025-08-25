@@ -42,7 +42,7 @@
   </a-modal>
 </template>
 <script setup lang="ts">
-import {createDict, deleteDict, getDictTypeList, updateDict} from "@/modules/app/items/data-dictionary/api";
+import {deleteDict,createDict,updateDict,getDictsByType} from '@seek-self/api'
 import {getBasicStore} from "@/modules/basic/store";
 
 const basicStore = getBasicStore()
@@ -114,7 +114,7 @@ const handleSubmit = () => {
 
 const loadTableData = () => {
   tableProps.data = []
-  getDictTypeList(view.cur).then(res => {
+  getDictsByType(view.cur).then(res => {
     tableProps.data = res.data
   })
 }

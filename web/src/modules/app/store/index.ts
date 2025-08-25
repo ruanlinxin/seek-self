@@ -1,10 +1,11 @@
 import {defineStore} from 'pinia';
 
+import {getAppList} from '@seek-self/api'
+
 import {getUserStore, store} from '@/store';
 import {genRunningAppInfo} from '@/modules/app/meta';
 import {App} from "@/modules/app/type";
-import {getAppList} from "@/modules/app/api";
-import {favoriteApps, recentApps, unFavoriteApps} from "@/modules/user/api";
+import {UserAppRelationAPI}  from '@seek-self/api/src/user'
 
 
 export const useAppsStore = defineStore('apps', () => {
@@ -38,7 +39,7 @@ export const useAppsStore = defineStore('apps', () => {
             idMap.value[id] = appRunningInfo
             const userId = getUserStore()?.profile?.userId
             if (userId) {
-                recentApps(entity.id)
+                UserAppRelationAPI.recordUsed(entity.id)
             }
             return id
         }
@@ -51,9 +52,9 @@ export const useAppsStore = defineStore('apps', () => {
     const toggleStar = (entity: App.entity) => {
         entity.favoriteAt = entity.favoriteAt ? null : new Date().toISOString()
         if (entity.favoriteAt) {
-            favoriteApps(entity.id)
+            UserAppRelationAPI.favorite(entity.id)
         } else {
-            unFavoriteApps(entity.id)
+            UserAppRelationAPI.unfavorite(entity.id)
         }
     }
 
