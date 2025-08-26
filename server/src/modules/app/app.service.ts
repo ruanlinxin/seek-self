@@ -61,9 +61,12 @@ export class AppService {
     },{});
     const query = this.appRepo.createQueryBuilder('app')
       .where('app.status = :status', { status: 1 });
-    if (!isAdmin(userId)) {
+    
+    // 只有在用户已登录且是管理员的情况下才返回系统应用
+    if (!userId || !isAdmin(userId)) {
       query.andWhere('app.isSystem = :isSystem', { isSystem: false });
     }
+    
     const apps = await query.getMany();
     return apps.map(app=>{
       return {

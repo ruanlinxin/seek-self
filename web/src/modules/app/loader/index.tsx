@@ -41,6 +41,7 @@ type MapKeys = keyof typeof NativeAppMap
 export const getAsyncComponent = (entity: App.entity | string) => {
     const appType = typeof entity === 'string' ? 'native' : entity.appType
     const key = typeof entity === 'string' ? entity : entity.componentKey
+    console.log(key,appType,NativeAppMap,NativeAppMap[key])
     switch (appType) {
         case 'native':
             return NativeAppMap[key as MapKeys] ? createAsyncComponent(NativeAppMap[key as MapKeys]) : NotFound

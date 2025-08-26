@@ -37,3 +37,5 @@ export * from './device';
 export * from './env';
 // 导出用户 API
 export * from './user';
+// 导出任务 API
+export * from './task';

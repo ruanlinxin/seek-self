@@ -99,3 +99,4 @@ export class Device extends BaseEntity {
   @Column({ type: 'boolean', default: true, comment: '是否在线' })
   isOnline: boolean;
 }
+

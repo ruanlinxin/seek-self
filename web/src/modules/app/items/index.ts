@@ -6,4 +6,5 @@ export default {
     P2P: () => import('./p2p/index.vue'),
     RandomChar: () => import('./random-char/index.vue'),
     Questionnaire: () => import('./questionnaire/index.vue'),
+    Task: () => import('./task/index.vue'),
 }

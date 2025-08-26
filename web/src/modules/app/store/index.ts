@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia';
 
-import {getAppList} from '@seek-self/api'
+import {getAppBox, getAppList} from '@seek-self/api'
 
 import {getUserStore, store} from '@/store';
 import {genRunningAppInfo} from '@/modules/app/meta';
@@ -16,7 +16,7 @@ export const useAppsStore = defineStore('apps', () => {
         if (loading.value) return Promise.resolve()
         loading.value = true
         appList.value = []
-        return getAppList().then(res => {
+        return getAppBox().then(res => {
             res.data.forEach(app => {
                 appMap.value[app.name] = app
             })

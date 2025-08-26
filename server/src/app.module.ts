@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AppModule as AppEntityModule } from './modules/app/app.module';
 import { EnvModule } from '@/modules/env/env.module';
 import { DeviceModule } from '@/modules/device/device.module';
+import { TaskModule } from '@/modules/app/task/task.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { DeviceModule } from '@/modules/device/device.module';
     AppEntityModule,
     EnvModule,
     DeviceModule,
+    TaskModule,
   ],
   controllers: [AppController],
   providers: [AppService],
