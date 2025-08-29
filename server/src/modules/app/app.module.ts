@@ -5,12 +5,14 @@ import { AppService } from './app.service';
 import { AppController } from './app.controller';
 import { AuthModule } from '../auth/auth.module';
 import { UserAppRelationModule } from '../user/user-app-relation/user-app-relation.module';
+import { AdminModule } from '../user/admin/admin.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([App]),
     AuthModule,
     UserAppRelationModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

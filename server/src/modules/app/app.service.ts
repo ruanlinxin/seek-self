@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { App } from './app.entity';
-import { isAdmin } from '@/common/tools';
+import { AdminService } from '../user/admin/admin.service';
 import { UserAppRelationService } from '../user/user-app-relation/user-app-relation.service';
 
 @Injectable()
@@ -10,7 +10,8 @@ export class AppService {
   constructor(
     @InjectRepository(App)
     private readonly appRepo: Repository<App>,
-    private readonly userAppRelationService: UserAppRelationService,  
+    private readonly userAppRelationService: UserAppRelationService,
+    private readonly adminService: AdminService,
   ) {}
 
   async create(data: Partial<App>) {
@@ -62,8 +63,14 @@ export class AppService {
     const query = this.appRepo.createQueryBuilder('app')
       .where('app.status = :status', { status: 1 });
     
+    // 检查用户是否为管理员
+    let isAdminUser = false;
+    if (userId) {
+      isAdminUser = await this.adminService.isAdmin(userId);
+    }
+    
     // 只有在用户已登录且是管理员的情况下才返回系统应用
-    if (!userId || !isAdmin(userId)) {
+    if (!userId || !isAdminUser) {
       query.andWhere('app.isSystem = :isSystem', { isSystem: false });
     }
     

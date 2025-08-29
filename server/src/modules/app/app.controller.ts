@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Patch, Delete, Param, Body, Request, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { isAdmin } from '@/common/tools';
+import { AdminService } from '../user/admin/admin.service';
 import { JwtService } from '@nestjs/jwt';
 import { CurrentUserId } from '@/common/decorators/user.decorator';
 
@@ -10,6 +10,7 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly jwtService: JwtService,
+    private readonly adminService: AdminService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
@@ -45,7 +46,12 @@ export class AppController {
       }
     }
     
-    const adminStatus = isAdmin(userId);
+    // 检查用户是否为管理员
+    let adminStatus = false;
+    if (userId) {
+      adminStatus = await this.adminService.isAdmin(userId);
+    }
+    
     return this.appService.findEnabledApps(adminStatus);
   }
 
